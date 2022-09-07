@@ -6,27 +6,34 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/PullPayment.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract BookNFT is ERC721, PullPayment, Ownable {
+contract ClassicalBookNFT is ERC721, PullPayment, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private currentTokenId;
 
     // Constants
-    uint256 public constant MAX_SUPPLY = 99;
+    uint256 public maxSupply = 1;
 
     /// @dev Base token URI used as a prefix by tokenURI().
     string public baseTokenURI;
 
+    event mintEvent(uint256, string, address);
+
     // name and symbol
     constructor() ERC721("Classical Book NFT Collectioin", "ClassicalBook") {}
 
-    function mintTo(address recipient) public payable returns (uint256) {
+    function mintTo(address recipient, string memory bookId)
+        public
+        payable
+        returns (uint256)
+    {
         uint256 tokenId = currentTokenId.current();
-        require(tokenId < MAX_SUPPLY, "Max supply reached");
+        require(tokenId < maxSupply, "Max supply reached");
 
         currentTokenId.increment();
-        uint256 newItemId = currentTokenId.current();
-        _safeMint(recipient, newItemId);
-        return newItemId;
+        uint256 newTokenId = currentTokenId.current();
+        emit mintEvent(newTokenId, bookId, recipient);
+        _safeMint(recipient, newTokenId);
+        return newTokenId;
     }
 
     /// @dev Returns an URI for a given token ID
@@ -39,6 +46,11 @@ contract BookNFT is ERC721, PullPayment, Ownable {
         baseTokenURI = _baseTokenURI;
     }
 
+    /// Sets max supply, one book one nft
+    function setMaxSupply(uint256 _maxSupply) public onlyOwner {
+        maxSupply = _maxSupply;
+    }
+
     /**
      * @dev See {IERC721Enumerable-totalSupply}.
      */
@@ -47,8 +59,8 @@ contract BookNFT is ERC721, PullPayment, Ownable {
         return tokenId;
     }
 
-    function maxSupply() public pure returns (uint256) {
-        return MAX_SUPPLY;
+    function getMaxSupply() public view returns (uint256) {
+        return maxSupply;
     }
 
     /// @dev Overridden in order to make it an onlyOwner function
