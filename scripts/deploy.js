@@ -7,6 +7,7 @@ task('deploy', 'Deploys the ClassicalBookNFT.sol contract').setAction(
       'ClassicalBookNFT',
       getAccount()
     );
+    // 不需要传参：constructor arguments
     const nft = await nftContractFactory.deploy();
     console.log(`Contract deployed to address: ${nft.address}`);
   }
