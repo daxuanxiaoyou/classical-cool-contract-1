@@ -41,10 +41,7 @@ contract ClassicalBookNFT is ERC721, Ownable, ReentrancyGuard, PullPayment {
     event SetMintPrice(uint256 price);
 
     // name and symbol
-    constructor() ERC721("Classical Book NFT Collectioin", "ClassicalBook") {
-        //drop 0
-        currentTokenId.increment();
-    }
+    constructor() ERC721("Classical Book NFT Collectioin", "ClassicalBook") {}
 
     function toggleIsMintEnabled() external onlyWhitelist {
         isMintEnabled = !isMintEnabled;
@@ -65,14 +62,14 @@ contract ClassicalBookNFT is ERC721, Ownable, ReentrancyGuard, PullPayment {
         require(isMintEnabled, "Minting not enabled");
         require(msg.value == mintPrice, "Please set the right value");
 
+        // tokenId ++
+        currentTokenId.increment();
         uint256 tokenId = currentTokenId.current();
-        require(tokenId <= maxSupply, "Max supply reached");
+        require(tokenId < maxSupply, "Max supply reached");
         //transfer eth to the contract
         _asyncTransfer(address(this), msg.value);
         // mint nft
         _safeMint(recipient, tokenId);
-        // tokenId ++
-        currentTokenId.increment();
         tokenToBook[tokenId] = bookId;
         emit MintEvent(recipient, tokenId, bookId);
         return tokenId;
@@ -110,7 +107,14 @@ contract ClassicalBookNFT is ERC721, Ownable, ReentrancyGuard, PullPayment {
         override
         onlyOwner
     {
-        super.withdrawPayments(payee);
+        // 先取
+        super.withdrawPayments(payable(address(this)));
+        // 再转
+        payee.transfer(address(this).balance);
+    }
+
+    receive() external payable {
+        //  to receiving ether
     }
 
     function addToWhitelist(address[] calldata _addrArr) external onlyOwner {
