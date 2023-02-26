@@ -13,7 +13,7 @@ contract ClassicalNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
     Counters.Counter private currentTokenId;
     Counters.Counter private reserveTokenId;
 
-    uint public balance;
+    uint256 public balance;
 
     // roles
     // DEFAULT_ADMIN_ROLE = 0x00
@@ -35,7 +35,12 @@ contract ClassicalNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
     address public public_key;
     /// store tokenid --> bookId
     mapping(uint256 => string) public tokenToBook;
-    event Track(string indexed _function, address sender, uint value, bytes data);
+    event Track(
+        string indexed _function,
+        address sender,
+        uint256 value,
+        bytes data
+    );
     event AddPKSuccess(address pk, address whoAdd);
 
     modifier onlyWhiteList() {
@@ -78,30 +83,31 @@ contract ClassicalNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
         emit AddPKSuccess(pk, msg.sender);
     }
 
-    function getPublickey() public view returns(address){
+    function getPublickey() public view returns (address) {
         return public_key;
     }
 
     //remove addresses to whiteList
-    function removeFromWhitelist(
-        address[] calldata _addrArr
-    ) external onlyOwner {
+    function removeFromWhitelist(address[] calldata _addrArr)
+        external
+        onlyOwner
+    {
         for (uint256 i = 0; i < _addrArr.length; i++) {
             _revokeRole(FREE_MINT_ROLE, _addrArr[i]);
         }
     }
 
-    //set address to switchList
+    // set address to switchList
     function addToSwitchlist(address _switchAddress) external onlyOwner {
         _grantRole(SWITCH_MINT_ROLE, _switchAddress);
     }
 
-    //remove address from switchList
+    // remove address from switchList
     function removeFromSwitchList(address _switchAddress) external onlyOwner {
         _revokeRole(SWITCH_MINT_ROLE, _switchAddress);
     }
 
-    //transfer admin
+    // transfer admin
     function transferAdmin(address _newAdmin) external onlyOwner {
         //first grantRole
         _grantRole(DEFAULT_ADMIN_ROLE, _newAdmin);
@@ -109,7 +115,7 @@ contract ClassicalNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
         _revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    //swith mintable
+    // swith mintable
     function toggleIsMintEnabled() external onlySwitchRole {
         isMintEnabled = !isMintEnabled;
     }
@@ -120,10 +126,12 @@ contract ClassicalNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
         emit SetMintPrice(mintPrice);
     }
 
-    function mint(
-        address _recipient,
-        string memory _bookId
-    ) public payable nonReentrant returns (uint256) {
+    function mint(address _recipient, string memory _bookId)
+        public
+        payable
+        nonReentrant
+        returns (uint256)
+    {
         require(isMintEnabled, "Minting not enabled");
         require(currentSupply <= maxSupply, "Max supply reached");
 
@@ -147,10 +155,11 @@ contract ClassicalNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
         return tokenId;
     }
 
-    function mintReserve(
-        address _recipient,
-        string memory _bookId
-    ) external onlyOwner returns (uint256) {
+    function mintReserve(address _recipient, string memory _bookId)
+        external
+        onlyOwner
+        returns (uint256)
+    {
         require(isMintEnabled, "Minting not enabled");
         require(currentSupply <= maxSupply, "Max supply reached");
 
@@ -179,6 +188,14 @@ contract ClassicalNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
         baseTokenURI = _baseTokenURI;
     }
 
+    /**
+     * @dev See {IERC721Enumerable-totalSupply}.
+     */
+    function totalSupply() public view returns (uint256) {
+        uint256 tokenId = currentTokenId.current();
+        return tokenId;
+    }
+
     /// Sets max supply, one book one nft
     function setMaxSupply(uint256 _maxSupply) public onlyOwner {
         require(_maxSupply > currentSupply, "Must greate than current supply");
@@ -186,33 +203,35 @@ contract ClassicalNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
     }
 
     /// @dev Overridden in order to make it an onlyOwner function
-    function withdrawPayments(
-        address payable _payee
-    ) public virtual override onlyOwner {
+    function withdrawPayments(address payable _payee)
+        public
+        virtual
+        override
+        onlyOwner
+    {
         // 先取
         super.withdrawPayments(payable(address(this)));
         // 再转
         _payee.transfer(address(this).balance);
     }
 
-    receive() external payable {
-        //  to receiving ether
-    }
-
-    function supportsInterface(
-        bytes4 interfaceId
-    ) public view override(ERC721, AccessControl) returns (bool) {
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721, AccessControl)
+        returns (bool)
+    {
         return super.supportsInterface(interfaceId);
     }
 
-    function fallback() public payable {
-        console.log('-----fallback');
+    fallback() external payable {
+        console.log("-----fallback");
         emit Track("fallback()", msg.sender, msg.value, msg.data);
         revert();
     }
 
-    function receive() public payable {
-        console.log('-----receive');
+    receive() external payable {
+        console.log("-----receive");
         balance += msg.value;
         emit Track("receive()", msg.sender, msg.value, "");
     }
