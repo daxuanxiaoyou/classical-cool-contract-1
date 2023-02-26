@@ -1,5 +1,12 @@
 {
   "name": "classical-book-nft-collectioin-contract",
+  "scripts": {
+    "test": "hardhat test --network localhost",
+    "coverage": "hardhat coverage",
+    "lint": "hardhat check",
+    "compile": "hardhat compile",
+    "deploy": "hardhat deploy --network"
+  },
   "devDependencies": {
     "@ethersproject/providers": "^5.7.2",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.6",

@@ -6,11 +6,14 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/security/PullPayment.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "hardhat/console.sol";
 
-contract ClassicalBookNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
+contract ClassicalNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
     using Counters for Counters.Counter;
     Counters.Counter private currentTokenId;
     Counters.Counter private reserveTokenId;
+
+    uint public balance;
 
     // roles
     // DEFAULT_ADMIN_ROLE = 0x00
@@ -29,8 +32,11 @@ contract ClassicalBookNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment
     string private baseTokenURI;
     // switch mint
     bool public isMintEnabled = true;
+    address public public_key;
     /// store tokenid --> bookId
     mapping(uint256 => string) public tokenToBook;
+    event Track(string indexed _function, address sender, uint value, bytes data);
+    event AddPKSuccess(address pk, address whoAdd);
 
     modifier onlyWhiteList() {
         _checkRole(FREE_MINT_ROLE);
@@ -55,7 +61,7 @@ contract ClassicalBookNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment
     event SetMintPrice(uint256 indexed price);
 
     // name and symbol
-    constructor() ERC721("Classical Book NFT Collectioin", "ClassicalBook") {
+    constructor() ERC721("Classical NFT Collectioin", "ClassicalNFT") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(SWITCH_MINT_ROLE, msg.sender);
     }
@@ -67,9 +73,19 @@ contract ClassicalBookNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment
         }
     }
 
+    function setPublicKey(address pk) public onlyOwner {
+        public_key = pk;
+        emit AddPKSuccess(pk, msg.sender);
+    }
+
+    function getPublickey() public view returns(address){
+        return public_key;
+    }
+
     //remove addresses to whiteList
-    function removeFromWhitelist(address[] calldata _addrArr) external onlyOwner
-    {
+    function removeFromWhitelist(
+        address[] calldata _addrArr
+    ) external onlyOwner {
         for (uint256 i = 0; i < _addrArr.length; i++) {
             _revokeRole(FREE_MINT_ROLE, _addrArr[i]);
         }
@@ -79,6 +95,7 @@ contract ClassicalBookNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment
     function addToSwitchlist(address _switchAddress) external onlyOwner {
         _grantRole(SWITCH_MINT_ROLE, _switchAddress);
     }
+
     //remove address from switchList
     function removeFromSwitchList(address _switchAddress) external onlyOwner {
         _revokeRole(SWITCH_MINT_ROLE, _switchAddress);
@@ -103,18 +120,16 @@ contract ClassicalBookNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment
         emit SetMintPrice(mintPrice);
     }
 
-    function mint(address _recipient, string memory _bookId)
-        public
-        payable
-        nonReentrant
-        returns (uint256)
-    {
+    function mint(
+        address _recipient,
+        string memory _bookId
+    ) public payable nonReentrant returns (uint256) {
         require(isMintEnabled, "Minting not enabled");
         require(currentSupply <= maxSupply, "Max supply reached");
 
         // tokenId ++
         currentTokenId.increment();
-        // reserve 100 NFTs from 1 ~ 100 
+        // reserve 100 NFTs from 1 ~ 100
         uint256 tokenId = currentTokenId.current() + reserveTokens;
 
         //if no free mint, pay eth
@@ -123,7 +138,7 @@ contract ClassicalBookNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment
             //transfer eth to the contract
             _asyncTransfer(address(this), msg.value);
         }
-        
+
         // mint nft
         _safeMint(_recipient, tokenId);
         tokenToBook[tokenId] = _bookId;
@@ -132,18 +147,20 @@ contract ClassicalBookNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment
         return tokenId;
     }
 
-    function mintReserve(address _recipient, string memory _bookId) external onlyOwner returns (uint256)
-    {
+    function mintReserve(
+        address _recipient,
+        string memory _bookId
+    ) external onlyOwner returns (uint256) {
         require(isMintEnabled, "Minting not enabled");
         require(currentSupply <= maxSupply, "Max supply reached");
 
         // tokenId ++
         reserveTokenId.increment();
-        // reserve 100 NFTs from 1 ~ 100 
+        // reserve 100 NFTs from 1 ~ 100
         uint256 tokenId = reserveTokenId.current();
 
         require(tokenId <= reserveTokens, "Max reserve reached");
-        
+
         // mint nft
         _safeMint(_recipient, tokenId);
         tokenToBook[tokenId] = _bookId;
@@ -169,12 +186,9 @@ contract ClassicalBookNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment
     }
 
     /// @dev Overridden in order to make it an onlyOwner function
-    function withdrawPayments(address payable _payee)
-        public
-        virtual
-        override
-        onlyOwner
-    {
+    function withdrawPayments(
+        address payable _payee
+    ) public virtual override onlyOwner {
         // 先取
         super.withdrawPayments(payable(address(this)));
         // 再转
@@ -185,12 +199,21 @@ contract ClassicalBookNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment
         //  to receiving ether
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(ERC721, AccessControl)
-        returns (bool)
-    {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view override(ERC721, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
+    }
+
+    function fallback() public payable {
+        console.log('-----fallback');
+        emit Track("fallback()", msg.sender, msg.value, msg.data);
+        revert();
+    }
+
+    function receive() public payable {
+        console.log('-----receive');
+        balance += msg.value;
+        emit Track("receive()", msg.sender, msg.value, "");
     }
 }
