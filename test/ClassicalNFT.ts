@@ -2,15 +2,27 @@ import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import { utils, Wallet } from "ethers";
+import {
+  concat,
+  hashMessage,
+  joinSignature,
+  keccak256,
+  toUtf8Bytes,
+} from "ethers/lib/utils";
+import { SigningKey } from "@ethersproject/signing-key";
+import { serialize } from "@ethersproject/transactions";
 
-describe("Lock", function () {
+// import { keccak256 } from "@ethersproject/keccak256";
+
+describe("ClassicalNFT", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
   async function deployClassicalNFTFixture() {
     const ONE_GWEI = 1_000_000_000;
 
-    const lockedAmount = ONE_GWEI;
+    const ClassicalNFTedAmount = ONE_GWEI;
 
     // Contracts are deployed using the first signer/account by default
     const [owner, otherAccount] = await ethers.getSigners();
@@ -20,16 +32,114 @@ describe("Lock", function () {
     await classicalNFT.deployed();
     // const classicalNFT = await ClassicalNFT.deploy();
 
-    return { classicalNFT, lockedAmount, owner, otherAccount };
+    return { classicalNFT, ClassicalNFTedAmount, owner, otherAccount };
   }
 
+  /**
+   * 长度太大了，达到了 193，导致签名失败，底层实现比这个要复杂的多。
+   * @param message
+   * @param privateKey
+   * @returns
+   */
+  async function signMsgFromString(message: string, privateKey: string) {
+    const prefix = "\x19Ethereum Signed Message:\n20";
+    const messageHash = keccak256(Buffer.from(prefix + message));
+    const privateKeyBuffer = Buffer.from(privateKey, "hex");
+    const signingKey = new utils.SigningKey(privateKeyBuffer);
+    const signature = signingKey.signDigest(messageHash);
+    const { r, s, v } = utils.splitSignature(signature);
+    const signatureBytes = Buffer.concat([
+      Buffer.from(r),
+      Buffer.from(s),
+      Buffer.from([v]),
+    ]);
+    const signedMessage = Buffer.concat([
+      Buffer.from(prefix),
+      Buffer.from(message),
+      signatureBytes,
+    ]);
+    // const signedMessageHex = signedMessage.toString("hex");
+    const signedMessageArrayify = utils.arrayify(signedMessage);
+    console.log(
+      "signedMessageArrayify:",
+      signedMessageArrayify,
+      signedMessageArrayify.length
+    );
+    return signedMessageArrayify;
+  }
+
+  /**
+   * 因为地址类型在 js 端是 42 为，减去 0x 2位，剩余 40 位（ js 端是按照4位算1位，所以算出来 length 是 40），在 solidity 端却是按照 8 bit 一位，所以 lenght 是 20 位。
+   * 两端的 length 计算逻辑不一样，所以结果不一样，就需要在 js 端通过 keccak256 算法将地址 address 转化为 256 位，也就是length 32（256/8）
+   * 然后在 solidity 端验签的时候，需要在 prefix 里面一样通过 keccak256 转化为 32 的 message。
+   * 这样在 js 和 dolidity 的 prefix 都是 32,解析就一致了。
+   * @param msg
+   * @param privateKey
+   * @returns
+   */
+  async function signMsgFromAddress(msg: string, privateKey: string) {
+    const signingKey = new SigningKey(privateKey);
+    const message = ethers.utils.solidityKeccak256(["address"], [msg]);
+    const data = ethers.utils.arrayify(message);
+    const hashData = hashMessage(data);
+    const digestData = signingKey.signDigest(hashData);
+    const signature = joinSignature(digestData);
+
+    console.log("data:", data);
+    console.log("data length:", data.length);
+    console.log("hashData:", hashData);
+    console.log("hashData length:", hashData.length);
+    console.log("digestData:", digestData);
+    console.log("signature:", signature);
+    console.log("signature length:", signature.length);
+
+    return signature;
+  }
+
+  /**
+   *
+   * @param msg
+   * @param privateKey
+   * @returns
+   */
+  async function signMsgFrom20(msg: string, privateKey: string) {
+    const signingKey = new SigningKey(privateKey);
+    console.log("----------------------:::", msg, msg.length);
+
+    const messagePrefix = "\x19Ethereum Signed Message:\n20";
+    let bytesMsg: Uint8Array = Uint8Array.from([]);
+    if (typeof msg === "string") {
+      bytesMsg = toUtf8Bytes(msg);
+    }
+
+    console.log(bytesMsg, "-----bytesMsg-----", bytesMsg.length);
+
+    const hashStr = keccak256(concat([toUtf8Bytes(messagePrefix), bytesMsg]));
+
+    console.log(hashStr, "-----hashStr-----", hashStr.length);
+
+    const signature = joinSignature(
+      // signingKey.signDigest(hashMessage("1"))
+      signingKey.signDigest(hashStr)
+    );
+    console.log(signature);
+    return signature;
+  }
+
+  async function signMsgFromWallet(msg: string, privateKey: string) {
+    const walletPrivateKey = new Wallet(privateKey);
+    const signedMsg = await walletPrivateKey.signMessage(msg);
+
+    console.log(walletPrivateKey.getAddress());
+    console.log("signedMsg:", signedMsg);
+    return signedMsg;
+  }
+  // async function recoverSignedMsg(signedMessage: string) {
+  //   const recoveredAddress = utils.recoverAddress(messageHash, signature);
+  //   return recoveredAddress;
+  // }
+
   describe("Deployment", function () {
-    it("Should set the right unlockTime", async function () {
-      const { classicalNFT } = await loadFixture(deployClassicalNFTFixture);
-
-      expect(await classicalNFT.getRoleAdmin()).to.equal(0);
-    });
-
     it("Should set the right owner", async function () {
       const { classicalNFT, owner } = await loadFixture(
         deployClassicalNFTFixture
@@ -40,88 +150,130 @@ describe("Lock", function () {
 
       expect(pk).to.equal(owner.address);
     });
-
-    it("Should receive and store the funds to lock", async function () {
-      const { lock, lockedAmount } = await loadFixture(
+    it("verify sign message", async function () {
+      const { classicalNFT, owner } = await loadFixture(
         deployClassicalNFTFixture
       );
 
-      expect(await ethers.provider.getBalance(lock.address)).to.equal(
-        lockedAmount
+      const privateKey =
+        "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+      const privateKeyNo0x =
+        "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+      // const sigedMsg = signMsg(owner.address, privateKey);
+      // const sigedMsg = signMsg(privateKey);
+      // const sigedMsg = signMsgFromAddress(owner.address, privateKey);
+
+      // 1、------------------------全部自己实现的逻辑 ------------------------
+      // const sigedMsg = signMsgFromString(
+      //   "99999999999999999999999999999999", //普通 32 位字符
+      //   privateKeyNo0x
+      // );
+
+      // 2、------------------------针对长度为 20 的普通字符做验证------------------------
+      // const sigedMsg = signMsgFrom20(
+      //   "99999999999999999999", //普通 20 位字符
+      //   privateKey
+      // );
+
+      // const verifyRtn = await classicalNFT._verify20(sigedMsg);
+
+      // 3、------------------------针对 address 验证------------------------
+      const sigedMsg = signMsgFromAddress(
+        owner.address, //msg.sender
+        privateKey
+      );
+
+      const verifyRtn = await classicalNFT._verifyAddress(sigedMsg);
+
+      await classicalNFT.setPublicKey(owner.address);
+      // const verifyRtn = await classicalNFT._verify(sigedMsg);
+      // const verifyRtn = await classicalNFT._verify2(sigedMsg);
+
+      expect(verifyRtn).to.equal(true);
+    });
+
+    it("Should receive and store the funds to ClassicalNFT", async function () {
+      const { ClassicalNFT, ClassicalNFTedAmount } = await loadFixture(
+        deployClassicalNFTFixture
+      );
+
+      expect(await ethers.provider.getBalance(ClassicalNFT.address)).to.equal(
+        ClassicalNFTedAmount
       );
     });
 
-    it("Should fail if the unlockTime is not in the future", async function () {
+    it("Should fail if the unClassicalNFTTime is not in the future", async function () {
       // We don't use the fixture here because we want a different deployment
       const latestTime = await time.latest();
-      const Lock = await ethers.getContractFactory("Lock");
-      await expect(Lock.deploy(latestTime, { value: 1 })).to.be.revertedWith(
-        "Unlock time should be in the future"
-      );
+      const ClassicalNFT = await ethers.getContractFactory("ClassicalNFT");
+      await expect(
+        ClassicalNFT.deploy(latestTime, { value: 1 })
+      ).to.be.revertedWith("UnClassicalNFT time should be in the future");
     });
   });
 
   describe("Withdrawals", function () {
     describe("Validations", function () {
       it("Should revert with the right error if called too soon", async function () {
-        const { lock } = await loadFixture(deployClassicalNFTFixture);
+        const { ClassicalNFT } = await loadFixture(deployClassicalNFTFixture);
 
-        await expect(lock.withdraw()).to.be.revertedWith(
+        await expect(ClassicalNFT.withdraw()).to.be.revertedWith(
           "You can't withdraw yet"
         );
       });
 
       it("Should revert with the right error if called from another account", async function () {
-        const { lock, unlockTime, otherAccount } = await loadFixture(
-          deployClassicalNFTFixture
-        );
+        const { ClassicalNFT, unClassicalNFTTime, otherAccount } =
+          await loadFixture(deployClassicalNFTFixture);
 
         // We can increase the time in Hardhat Network
-        await time.increaseTo(unlockTime);
+        await time.increaseTo(unClassicalNFTTime);
 
-        // We use lock.connect() to send a transaction from another account
-        await expect(lock.connect(otherAccount).withdraw()).to.be.revertedWith(
-          "You aren't the owner"
-        );
+        // We use ClassicalNFT.connect() to send a transaction from another account
+        await expect(
+          ClassicalNFT.connect(otherAccount).withdraw()
+        ).to.be.revertedWith("You aren't the owner");
       });
 
-      it("Shouldn't fail if the unlockTime has arrived and the owner calls it", async function () {
-        const { lock, unlockTime } = await loadFixture(
+      it("Shouldn't fail if the unClassicalNFTTime has arrived and the owner calls it", async function () {
+        const { ClassicalNFT, unClassicalNFTTime } = await loadFixture(
           deployClassicalNFTFixture
         );
 
         // Transactions are sent using the first signer by default
-        await time.increaseTo(unlockTime);
+        await time.increaseTo(unClassicalNFTTime);
 
-        await expect(lock.withdraw()).not.to.be.reverted;
+        await expect(ClassicalNFT.withdraw()).not.to.be.reverted;
       });
     });
 
     describe("Events", function () {
       it("Should emit an event on withdrawals", async function () {
-        const { lock, unlockTime, lockedAmount } = await loadFixture(
-          deployClassicalNFTFixture
-        );
+        const { ClassicalNFT, unClassicalNFTTime, ClassicalNFTedAmount } =
+          await loadFixture(deployClassicalNFTFixture);
 
-        await time.increaseTo(unlockTime);
+        await time.increaseTo(unClassicalNFTTime);
 
-        await expect(lock.withdraw())
-          .to.emit(lock, "Withdrawal")
-          .withArgs(lockedAmount, anyValue); // We accept any value as `when` arg
+        await expect(ClassicalNFT.withdraw())
+          .to.emit(ClassicalNFT, "Withdrawal")
+          .withArgs(ClassicalNFTedAmount, anyValue); // We accept any value as `when` arg
       });
     });
 
     describe("Transfers", function () {
       it("Should transfer the funds to the owner", async function () {
-        const { lock, unlockTime, lockedAmount, owner } = await loadFixture(
-          deployClassicalNFTFixture
-        );
+        const {
+          ClassicalNFT,
+          unClassicalNFTTime,
+          ClassicalNFTedAmount,
+          owner,
+        } = await loadFixture(deployClassicalNFTFixture);
 
-        await time.increaseTo(unlockTime);
+        await time.increaseTo(unClassicalNFTTime);
 
-        await expect(lock.withdraw()).to.changeEtherBalances(
-          [owner, lock],
-          [lockedAmount, -lockedAmount]
+        await expect(ClassicalNFT.withdraw()).to.changeEtherBalances(
+          [owner, ClassicalNFT],
+          [ClassicalNFTedAmount, -ClassicalNFTedAmount]
         );
       });
     });
