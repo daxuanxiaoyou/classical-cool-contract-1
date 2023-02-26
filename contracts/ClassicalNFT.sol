@@ -86,48 +86,12 @@ contract ClassicalNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
     }
 
     // TODO:need use internal
-    function _verifyAddress(bytes memory signature) public view returns (bool verified) {
-        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
-        bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, keccak256( abi.encodePacked(msg.sender))));
-        address calculated_public_key = ECDSA.recover(prefixedHash, signature); // same： prefixedHash.recover(signature)
-        console.log('---------------');
-        console.logBytes(signature);
-        console.log(signature.length);
-        console.logBytes32(prefixedHash);
-        console.log(prefixedHash.length);
-        console.logAddress(calculated_public_key);
-        console.logAddress(public_key);
-        console.log((calculated_public_key == public_key));
-        return (calculated_public_key == public_key);
-    }
-
-    // TODO:need use internal
-    // 效果和 _verifyAddress 一样
-    function _verify2(bytes memory signature) public view returns (bool) {
-        console.log('---------------');
-        console.logBytes(signature);
-        console.log(signature.length);
+    function _verifyAddress(bytes memory signature) public view returns (bool) {
         bytes32 data = keccak256( abi.encodePacked(msg.sender));
         bytes32 dataHash = data.toEthSignedMessageHash();
         address recoverAdd = dataHash.recover(signature);
         return  recoverAdd== public_key;
     }
-
-     // TODO:need use internal
-    function _verify20(bytes memory signature) public view returns (bool verified) {
-        bytes memory prefix = "\x19Ethereum Signed Message:\n20";
-        bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, keccak256( abi.encodePacked(msg.sender))));
-        address calculated_public_key = ECDSA.recover(prefixedHash, signature); // same： prefixedHash.recover(signature)
-        console.log('---------------');
-        console.logBytes(signature);
-        console.log(signature.length);
-        console.logBytes32(prefixedHash);
-        console.log(prefixedHash.length);
-        console.logAddress(calculated_public_key);
-
-        return (calculated_public_key == public_key);
-    }
-
 
     //remove addresses to whiteList
     function removeFromWhitelist(

@@ -154,14 +154,12 @@ describe("ClassicalNFT", function () {
       const { classicalNFT, owner } = await loadFixture(
         deployClassicalNFTFixture
       );
+      await classicalNFT.setPublicKey(owner.address);
 
       const privateKey =
         "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
       const privateKeyNo0x =
         "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-      // const sigedMsg = signMsg(owner.address, privateKey);
-      // const sigedMsg = signMsg(privateKey);
-      // const sigedMsg = signMsgFromAddress(owner.address, privateKey);
 
       // 1、------------------------全部自己实现的逻辑 ------------------------
       // const sigedMsg = signMsgFromString(
@@ -170,22 +168,56 @@ describe("ClassicalNFT", function () {
       // );
 
       // 2、------------------------针对长度为 20 的普通字符做验证------------------------
-      // const sigedMsg = signMsgFrom20(
-      //   "99999999999999999999", //普通 20 位字符
-      //   privateKey
-      // );
-
-      // const verifyRtn = await classicalNFT._verify20(sigedMsg);
-
-      // 3、------------------------针对 address 验证------------------------
-      const sigedMsg = signMsgFromAddress(
-        owner.address, //msg.sender
+      const sigedMsg = signMsgFrom20(
+        "99999999999999999999", //普通 20 位字符
         privateKey
       );
 
-      const verifyRtn = await classicalNFT._verifyAddress(sigedMsg);
+      const verifyRtn = await classicalNFT._verify20(sigedMsg);
 
-      await classicalNFT.setPublicKey(owner.address);
+      // 对应的合约代码
+      // // TODO:need use internal
+      // function _verify20(bytes memory signature) public view returns (bool verified) {
+      //   bytes memory prefix = "\x19Ethereum Signed Message:\n20";
+      //   bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, '99999999999999999999'));
+      //   address calculated_public_key = ECDSA.recover(prefixedHash, signature); // same： prefixedHash.recover(signature)
+      //   console.log('---------------');
+      //   console.logBytes(signature);
+      //   console.log(signature.length);
+      //   console.logBytes32(prefixedHash);
+      //   console.log(prefixedHash.length);
+      //   console.logAddress(calculated_public_key);
+
+      //   return (calculated_public_key == public_key);
+      // }
+
+      // 3、------------------------针对 address 验证------------------------
+      // const sigedMsg = signMsgFromAddress(
+      //   owner.address, //msg.sender
+      //   privateKey
+      // );
+
+      // const verifyRtn = await classicalNFT._verifyAddress(sigedMsg);
+      // const verifyRtn = await classicalNFT._verify2(sigedMsg);
+
+      // 对应的合约代码
+      //   function _verifyAddress(bytes memory signature) public view returns (bool verified) {
+      //     bytes memory prefix = "\x19Ethereum Signed Message:\n32";
+      //     bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, keccak256( abi.encodePacked(msg.sender))));
+      //     address calculated_public_key = ECDSA.recover(prefixedHash, signature); // same： prefixedHash.recover(signature)
+      //     console.log('---------------');
+      //     console.logBytes(abi.encode(msg.sender)); //去除0x，32 Byte，加 0x 66 个十六进制
+      //     console.logBytes(abi.encodePacked(msg.sender)); //去除0x，20 Byte，和 Address 一样，加 0x 42 个十六进制
+      //     console.logBytes(signature);
+      //     console.log(signature.length);
+      //     console.logBytes32(prefixedHash);
+      //     console.log(prefixedHash.length);
+      //     console.logAddress(calculated_public_key);
+      //     console.logAddress(public_key);
+      //     console.log((calculated_public_key == public_key));
+      //     return (calculated_public_key == public_key);
+      // }
+
       // const verifyRtn = await classicalNFT._verify(sigedMsg);
       // const verifyRtn = await classicalNFT._verify2(sigedMsg);
 
