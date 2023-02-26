@@ -1,4 +1,4 @@
-# ClassicalBookNFT Smart Contract Project
+# ClassicalNFT Smart Contract Project
 
 > 典籍NFT
 
@@ -37,9 +37,9 @@ hh verify 0x8311D4CdF4EEB244936c2404d13B0EB9d02d5C67
 Nothing to compile
 No need to generate any newer typings.
 Successfully submitted source code for contract
-contracts/ClassicalBookNFT.sol:ClassicalBookNFT at 0x8311D4CdF4EEB244936c2404d13B0EB9d02d5C67
+contracts/ClassicalNFT.sol:ClassicalNFT at 0x8311D4CdF4EEB244936c2404d13B0EB9d02d5C67
 for verification on the block explorer. Waiting for verification result...
 
-Successfully verified contract ClassicalBookNFT on Etherscan.
+Successfully verified contract ClassicalNFT on Etherscan.
 https://goerli.etherscan.io/address/0x8311D4CdF4EEB244936c2404d13B0EB9d02d5C67#code
 ```

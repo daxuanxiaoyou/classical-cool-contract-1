@@ -1,10 +1,10 @@
 const { task } = require('hardhat/config');
 const { getAccount, getNetwork } = require('./helpers');
 
-task('deploy', 'Deploys the ClassicalBookNFT.sol contract').setAction(
+task('deploy', 'Deploys the ClassicalNFT.sol contract').setAction(
   async function (taskArguments, hre) {
     const nftContractFactory = await hre.ethers.getContractFactory(
-      'ClassicalBookNFT',
+      'ClassicalNFT',
       getAccount()
     );
     // 不需要传参：constructor arguments
