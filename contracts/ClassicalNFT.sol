@@ -57,7 +57,7 @@ contract ClassicalNFT is
     event Track(
         string indexed _function,
         address sender,
-        uint value,
+        uint256 value,
         bytes data
     );
     event AddPKSuccess(address pk, address whoAdd);
@@ -123,17 +123,17 @@ contract ClassicalNFT is
         }
     }
 
-    //set address to switchList
+    // set address to switchList
     function addToSwitchlist(address _switchAddress) external onlyOwner {
         _grantRole(SWITCH_MINT_ROLE, _switchAddress);
     }
 
-    //remove address from switchList
+    // remove address from switchList
     function removeFromSwitchList(address _switchAddress) external onlyOwner {
         _revokeRole(SWITCH_MINT_ROLE, _switchAddress);
     }
 
-    //transfer admin
+    // transfer admin
     function transferAdmin(address _newAdmin) external onlyOwner {
         //first grantRole
         _grantRole(DEFAULT_ADMIN_ROLE, _newAdmin);
@@ -141,7 +141,7 @@ contract ClassicalNFT is
         _revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    //swith mintable
+    // swith mintable
     function toggleIsMintEnabled() external onlySwitchRole {
         isMintEnabled = !isMintEnabled;
     }
@@ -209,6 +209,14 @@ contract ClassicalNFT is
     /// @dev Sets the base token URI prefix.
     function setBaseTokenURI(string memory _baseTokenURI) public onlyOwner {
         baseTokenURI = _baseTokenURI;
+    }
+
+    /**
+     * @dev See {IERC721Enumerable-totalSupply}.
+     */
+    function totalSupply() public view returns (uint256) {
+        uint256 tokenId = currentTokenId.current();
+        return tokenId;
     }
 
     /// Sets max supply, one book one nft
