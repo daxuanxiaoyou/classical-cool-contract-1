@@ -7,12 +7,22 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/security/PullPayment.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "hardhat/console.sol";
 
-contract ClassicalNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
+contract ClassicalNFT is
+    ERC721,
+    AccessControl,
+    ReentrancyGuard,
+    PullPayment,
+    ERC2981
+{
     using Counters for Counters.Counter;
     using ECDSA for bytes;
     using ECDSA for bytes32;
+    using SafeMath for uint256;
+
     Counters.Counter private currentTokenId;
     Counters.Counter private reserveTokenId;
 
@@ -36,6 +46,16 @@ contract ClassicalNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
     // switch mint
     bool public isMintEnabled = true;
     address public public_key;
+
+    // Public good address，未来安全阶梯给公益地址打款
+    address public publicGoodAddress;
+
+    // Treasury address，国库地址设置
+    address public treasuryAddress;
+
+    // ERC2981 royalty percentage (3%)
+    uint256 public constant ROYALTY_PERCENTAGE = 3;
+
     /// store tokenid --> bookId
     mapping(uint256 => string) public tokenToBook;
     event Track(
@@ -74,6 +94,16 @@ contract ClassicalNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
         _grantRole(SWITCH_MINT_ROLE, msg.sender);
     }
 
+    // // ERC2981 implementation
+    // function royaltyInfo(
+    //     uint256,
+    //     uint256 _salePrice
+    // ) external view override returns (address receiver, uint256 royaltyAmount) {
+    //     // Calculate royalty amount as a percentage of the sale price
+    //     uint256 _royaltyAmount = _salePrice.mul(ROYALTY_PERCENTAGE).div(100);
+    //     return (address(this), _royaltyAmount);
+    // }
+
     //set addresses to whiteList
     function addToWhitelist(address[] calldata _addrArr) external onlyOwner {
         for (uint256 i = 0; i < _addrArr.length; i++) {
@@ -92,17 +122,16 @@ contract ClassicalNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
 
     // TODO:need use internal
     function _verifyAddress(bytes memory signature) public view returns (bool) {
-        bytes32 data = keccak256( abi.encodePacked(msg.sender));
+        bytes32 data = keccak256(abi.encodePacked(msg.sender));
         bytes32 dataHash = data.toEthSignedMessageHash();
         address recoverAdd = dataHash.recover(signature);
-        return  recoverAdd== public_key;
+        return recoverAdd == public_key;
     }
 
     //remove addresses to whiteList
-    function removeFromWhitelist(address[] calldata _addrArr)
-        external
-        onlyOwner
-    {
+    function removeFromWhitelist(
+        address[] calldata _addrArr
+    ) external onlyOwner {
         for (uint256 i = 0; i < _addrArr.length; i++) {
             _revokeRole(FREE_MINT_ROLE, _addrArr[i]);
         }
@@ -137,12 +166,10 @@ contract ClassicalNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
         emit SetMintPrice(mintPrice);
     }
 
-    function mint(address _recipient, string memory _bookId)
-        public
-        payable
-        nonReentrant
-        returns (uint256)
-    {
+    function mint(
+        address _recipient,
+        string memory _bookId
+    ) public payable nonReentrant returns (uint256) {
         require(isMintEnabled, "Minting not enabled");
         require(currentSupply <= maxSupply, "Max supply reached");
 
@@ -162,15 +189,17 @@ contract ClassicalNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
         _safeMint(_recipient, tokenId);
         tokenToBook[tokenId] = _bookId;
         currentSupply++;
+        if (royaltyValue > 0) {
+            _setTokenRoyalty(tokenId, royaltyRecipient, royaltyValue);
+        }
         emit MintEvent(_recipient, tokenId, _bookId);
         return tokenId;
     }
 
-    function mintReserve(address _recipient, string memory _bookId)
-        external
-        onlyOwner
-        returns (uint256)
-    {
+    function mintReserve(
+        address _recipient,
+        string memory _bookId
+    ) external onlyOwner returns (uint256) {
         require(isMintEnabled, "Minting not enabled");
         require(currentSupply <= maxSupply, "Max supply reached");
 
@@ -214,24 +243,18 @@ contract ClassicalNFT is ERC721, AccessControl, ReentrancyGuard, PullPayment {
     }
 
     /// @dev Overridden in order to make it an onlyOwner function
-    function withdrawPayments(address payable _payee)
-        public
-        virtual
-        override
-        onlyOwner
-    {
+    function withdrawPayments(
+        address payable _payee
+    ) public virtual override onlyOwner {
         // 先取
         super.withdrawPayments(payable(address(this)));
         // 再转
         _payee.transfer(address(this).balance);
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(ERC721, AccessControl)
-        returns (bool)
-    {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view override(ERC721, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
