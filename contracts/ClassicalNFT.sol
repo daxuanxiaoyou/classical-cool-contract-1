@@ -258,15 +258,6 @@ contract ClassicalNFT is
     //     super._setDefaultRoyalty(treasuryAddress, feeNumerator);
     // }
 
-    // receiver 搞一个版税地址
-    function setDefaultRoyalty(uint96 feeNumerator) public onlyOwner {
-        super._setDefaultRoyalty(treasuryAddress, feeNumerator);
-    }
-
-    // function batchConfig(uint96 feeNumerator) public onlyOwner {
-    //     super._setDefaultRoyalty(treasuryAddress, feeNumerator);
-    // }
-
     fallback() external payable {
         emit Track("fallback()", msg.sender, msg.value, msg.data);
         revert();
