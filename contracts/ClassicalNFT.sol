@@ -90,16 +90,6 @@ contract ClassicalNFT is
         _grantRole(SWITCH_MINT_ROLE, msg.sender);
     }
 
-    // // ERC2981 implementation
-    // function royaltyInfo(
-    //     uint256,
-    //     uint256 _salePrice
-    // ) external view override returns (address receiver, uint256 royaltyAmount) {
-    //     // Calculate royalty amount as a percentage of the sale price
-    //     uint256 _royaltyAmount = _salePrice.mul(ROYALTY_PERCENTAGE).div(100);
-    //     return (address(this), _royaltyAmount);
-    // }
-
     //set addresses to whiteList
     function addToWhitelist(address[] calldata _addrArr) external onlyOwner {
         for (uint256 i = 0; i < _addrArr.length; i++) {
@@ -251,12 +241,21 @@ contract ClassicalNFT is
         return super.supportsInterface(interfaceId);
     }
 
-    // function setTokenRoyalty(
-    //     uint256 tokenId,
-    //     address receiver,
-    //     uint96 feeNumerator
-    // ) public onlyOwner {
-    //     _setTokenRoyalty(tokenId, receiver, feeNumerator);
+    function setTokenRoyalty(
+        uint256 tokenId,
+        address receiver,
+        uint96 feeNumerator
+    ) public onlyOwner {
+        _setTokenRoyalty(tokenId, receiver, feeNumerator);
+    }
+
+    // receiver 搞一个版税地址
+    function setDefaultRoyalty(uint96 feeNumerator) public onlyOwner {
+        super._setDefaultRoyalty(treasuryAddress, feeNumerator);
+    }
+
+    // function batchConfig(uint96 feeNumerator) public onlyOwner {
+    //     super._setDefaultRoyalty(treasuryAddress, feeNumerator);
     // }
 
     // receiver 搞一个版税地址
