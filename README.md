@@ -44,7 +44,18 @@ Successfully verified contract ClassicalNFT on Etherscan.
 https://goerli.etherscan.io/address/0x52a508dF0a297b60A7d0496f19f195F46CbdAC70#code
 ```
 
+
 # UT Case
-> hh node # 如果你需要在 localhost 跑 UT 测试，需要先启动本地节点
-> hh test --network localhost # 跑全部 case
-> hh test --grep 'sign message' --network localhost   # 在本地 node 环境跑签名 case
+
+如果你需要在 localhost 跑 UT 测试，需要先启动本地节点
+```shell
+hh node
+``` 
+跑全部 case
+```shell
+hh test --network localhost
+``` 
+在本地 node 环境跑签名 case
+```shell
+hh test --grep 'sign message' --network localhost
+``` 
