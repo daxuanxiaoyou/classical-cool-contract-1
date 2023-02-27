@@ -237,7 +237,7 @@ contract ClassicalNFT is
 
     function supportsInterface(
         bytes4 interfaceId
-    ) public view override(ERC721, AccessControl) returns (bool) {
+    ) public view override(ERC721, ERC2981, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
