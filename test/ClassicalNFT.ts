@@ -286,7 +286,7 @@ describe("ClassicalNFT", () => {
       );
     });
     it("has the right recerver and royalty amount", async function () {
-      const tokenId = await classicalNFT.mint(otherAccount.address, "2", {
+      const tokenId = classicalNFT.mint(otherAccount.address, "2", {
         value: ethers.utils.parseEther("0.0002"),
       });
       await classicalNFT.setTokenRoyalty(tokenId, otherAccount.address, 3000);

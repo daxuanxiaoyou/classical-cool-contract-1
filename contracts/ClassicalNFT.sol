@@ -43,14 +43,13 @@ contract ClassicalNFT is
     bool public isMintEnabled = true;
     address public public_key;
 
-    // Public good address，未来安全阶梯给公益地址打款
+    // TODO:Public good address，未来阶梯给公益地址打款
     address public publicGoodAddress;
 
-    // Treasury address，国库地址设置
+    // TODO: Treasury address，国库地址设置
     address public treasuryAddress;
 
-    // ERC2981 royalty percentage (3%)
-    uint256 public constant ROYALTY_PERCENTAGE = 3;
+    // TODO 定期多签捐赠，把捐赠资金锁定 vincent
 
     /// store tokenid --> bookId
     mapping(uint256 => string) public tokenToBook;
@@ -154,11 +153,19 @@ contract ClassicalNFT is
 
     function mint(
         address _recipient,
-        string memory _bookId
+        string memory _bookId,
+        bytes memory signature
     ) public payable nonReentrant returns (uint256) {
         require(isMintEnabled, "Minting not enabled");
         require(currentSupply <= maxSupply, "Max supply reached");
+        // require(_verifyAddress(signature), "xxxxx");
 
+        console.log("--------------");
+        console.log(msg.sender);
+        console.log(msg.value);
+        console.log(mintPrice);
+        console.log(_recipient);
+        console.log(_bookId);
         // tokenId ++
         currentTokenId.increment();
         // reserve 100 NFTs from 1 ~ 100
@@ -176,6 +183,8 @@ contract ClassicalNFT is
         tokenToBook[tokenId] = _bookId;
         currentSupply++;
         emit MintEvent(_recipient, tokenId, _bookId);
+        console.log("--------->>>>");
+        console.log(tokenId);
         return tokenId;
     }
 
