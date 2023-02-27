@@ -7,7 +7,6 @@ import "hardhat-deploy-ethers";
 import "hardhat-gas-reporter";
 import "@typechain/hardhat";
 import "solidity-coverage";
-// import "hardhat-deploy-tenderly";
 require("dotenv").config();
 require("./scripts/deploy.js");
 
