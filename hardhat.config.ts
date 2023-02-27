@@ -1,14 +1,14 @@
-import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox";
-import "dotenv/config";
-import "hardhat-deploy";
-import "@nomiclabs/hardhat-ethers";
-import "hardhat-deploy-ethers";
-import "hardhat-gas-reporter";
-import "@typechain/hardhat";
-import "solidity-coverage";
-require("dotenv").config();
-require("./scripts/deploy.js");
+import { HardhatUserConfig } from 'hardhat/config';
+import '@nomicfoundation/hardhat-toolbox';
+import 'dotenv/config';
+// import "hardhat-deploy";
+import '@nomiclabs/hardhat-ethers';
+// import "hardhat-deploy-ethers";
+import 'hardhat-gas-reporter';
+import '@typechain/hardhat';
+import 'solidity-coverage';
+require('dotenv').config();
+require('./scripts/deploy.js');
 
 const { ALCHEMY_API_URL, ACCOUNT_PRIVATE_KEY, ETHERSCAN_API_KEY } = process.env;
 
@@ -22,7 +22,7 @@ const { ALCHEMY_API_URL, ACCOUNT_PRIVATE_KEY, ETHERSCAN_API_KEY } = process.env;
 
 const config: HardhatUserConfig = {
   // solidity: "0.8.7",
-  defaultNetwork: "goerli",
+  defaultNetwork: 'goerli',
   networks: {
     hardhat: {
       allowUnlimitedContractSize: true,
@@ -41,7 +41,7 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: "0.8.7",
+        version: '0.8.7',
         settings: {
           optimizer: {
             enabled: true,
