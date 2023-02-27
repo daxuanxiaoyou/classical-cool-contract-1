@@ -251,13 +251,13 @@ contract ClassicalNFT is
         return super.supportsInterface(interfaceId);
     }
 
-    function setTokenRoyalty(
-        uint256 tokenId,
-        address receiver,
-        uint96 feeNumerator
-    ) public onlyOwner {
-        _setTokenRoyalty(tokenId, receiver, feeNumerator);
-    }
+    // function setTokenRoyalty(
+    //     uint256 tokenId,
+    //     address receiver,
+    //     uint96 feeNumerator
+    // ) public onlyOwner {
+    //     _setTokenRoyalty(tokenId, receiver, feeNumerator);
+    // }
 
     // receiver 搞一个版税地址
     function setDefaultRoyalty(uint96 feeNumerator) public onlyOwner {
