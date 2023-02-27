@@ -1,7 +1,7 @@
-import { HardhatUserConfig } from 'hardhat/config';
-import '@nomicfoundation/hardhat-toolbox';
-require('dotenv').config();
-require('./scripts/deploy.js');
+import { HardhatUserConfig } from "hardhat/config";
+import "@nomicfoundation/hardhat-toolbox";
+require("dotenv").config();
+require("./scripts/deploy.js");
 
 const { ALCHEMY_API_URL, ACCOUNT_PRIVATE_KEY, ETHERSCAN_API_KEY } = process.env;
 
@@ -14,10 +14,15 @@ const { ALCHEMY_API_URL, ACCOUNT_PRIVATE_KEY, ETHERSCAN_API_KEY } = process.env;
 // --- end ---
 
 const config: HardhatUserConfig = {
-  solidity: '0.8.1',
-  defaultNetwork: 'goerli',
+  solidity: "0.8.1",
+  defaultNetwork: "goerli",
   networks: {
-    hardhat: {},
+    hardhat: {
+      allowUnlimitedContractSize: true,
+    },
+    localhost: {
+      allowUnlimitedContractSize: true,
+    },
     goerli: {
       url: ALCHEMY_API_URL,
       accounts: [`0x${ACCOUNT_PRIVATE_KEY}`],

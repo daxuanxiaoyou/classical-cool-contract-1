@@ -13,10 +13,10 @@ import "hardhat/console.sol";
 
 contract ClassicalNFT is
     ERC721,
+    ERC2981,
     AccessControl,
     ReentrancyGuard,
-    PullPayment,
-    ERC2981
+    PullPayment
 {
     using Counters for Counters.Counter;
     using ECDSA for bytes;
@@ -191,19 +191,19 @@ contract ClassicalNFT is
         _safeMint(_recipient, tokenId);
         tokenToBook[tokenId] = _bookId;
         currentSupply++;
-        if (royaltyValue > 0) {
-            _setTokenRoyalty(tokenId, royaltyRecipient, royaltyValue);
-        }
+        // if (royaltyValue > 0) {
+        //     _setTokenRoyalty(tokenId, royaltyRecipient, royaltyValue);
+        // }
         emit MintEvent(_recipient, tokenId, _bookId);
         return tokenId;
     }
 
-    function setDefaultRoyalty(
-        address receiver,
-        uint96 feeNumerator
-    ) public onlyOwner {
-        super._setDefaultRoyalty(receiver, feeNumerator);
-    }
+    // function setDefaultRoyalty(
+    //     address receiver,
+    //     uint96 feeNumerator
+    // ) public onlyOwner {
+    //     super._setDefaultRoyalty(receiver, feeNumerator);
+    // }
 
     function mintReserve(
         address _recipient,
@@ -259,13 +259,13 @@ contract ClassicalNFT is
         return super.supportsInterface(interfaceId);
     }
 
-    function setTokenRoyalty(
-        uint256 tokenId,
-        address receiver,
-        uint96 feeNumerator
-    ) public onlyOwner {
-        _setTokenRoyalty(tokenId, receiver, feeNumerator);
-    }
+    // function setTokenRoyalty(
+    //     uint256 tokenId,
+    //     address receiver,
+    //     uint96 feeNumerator
+    // ) public onlyOwner {
+    //     _setTokenRoyalty(tokenId, receiver, feeNumerator);
+    // }
 
     function transferFrom(
         address from,

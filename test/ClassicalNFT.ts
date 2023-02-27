@@ -12,6 +12,8 @@ import {
 } from "ethers/lib/utils";
 import { SigningKey } from "@ethersproject/signing-key";
 import { serialize } from "@ethersproject/transactions";
+import dotenv from "dotenv";
+dotenv.config();
 
 // import { keccak256 } from "@ethersproject/keccak256";
 
@@ -157,7 +159,8 @@ describe("ClassicalNFT", function () {
       await classicalNFT.setPublicKey(owner.address);
 
       const privateKey =
-        "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+        "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; //localhost 的私钥
+      // const privateKey = `0x${process.env.ACCOUNT_PRIVATE_KEY}` || "";
       const privateKeyNo0x =
         "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
@@ -168,12 +171,12 @@ describe("ClassicalNFT", function () {
       // );
 
       // 2、------------------------针对长度为 20 的普通字符做验证------------------------
-      const sigedMsg = signMsgFrom20(
-        "99999999999999999999", //普通 20 位字符
-        privateKey
-      );
+      // const sigedMsg = signMsgFrom20(
+      //   "99999999999999999999", //普通 20 位字符
+      //   privateKey
+      // );
 
-      const verifyRtn = await classicalNFT._verify20(sigedMsg);
+      // const verifyRtn = await classicalNFT._verify20(sigedMsg);
 
       // 对应的合约代码
       // // TODO:need use internal
@@ -192,12 +195,12 @@ describe("ClassicalNFT", function () {
       // }
 
       // 3、------------------------针对 address 验证------------------------
-      // const sigedMsg = signMsgFromAddress(
-      //   owner.address, //msg.sender
-      //   privateKey
-      // );
+      const sigedMsg = signMsgFromAddress(
+        owner.address, //msg.sender
+        privateKey
+      );
 
-      // const verifyRtn = await classicalNFT._verifyAddress(sigedMsg);
+      const verifyRtn = await classicalNFT._verifyAddress(sigedMsg);
       // const verifyRtn = await classicalNFT._verify2(sigedMsg);
 
       // 对应的合约代码
