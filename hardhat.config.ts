@@ -1,5 +1,13 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
+import "dotenv/config";
+import "hardhat-deploy";
+import "@nomiclabs/hardhat-ethers";
+import "hardhat-deploy-ethers";
+import "hardhat-gas-reporter";
+import "@typechain/hardhat";
+import "solidity-coverage";
+// import "hardhat-deploy-tenderly";
 require("dotenv").config();
 require("./scripts/deploy.js");
 
@@ -14,7 +22,7 @@ const { ALCHEMY_API_URL, ACCOUNT_PRIVATE_KEY, ETHERSCAN_API_KEY } = process.env;
 // --- end ---
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.1",
+  // solidity: "0.8.7",
   defaultNetwork: "goerli",
   networks: {
     hardhat: {
@@ -30,6 +38,19 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: ETHERSCAN_API_KEY,
+  },
+  solidity: {
+    compilers: [
+      {
+        version: "0.8.7",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+    ],
   },
 };
 

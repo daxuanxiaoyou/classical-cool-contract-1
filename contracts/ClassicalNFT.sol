@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.1;
+pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/security/PullPayment.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "hardhat/console.sol";
 
@@ -21,12 +20,9 @@ contract ClassicalNFT is
     using Counters for Counters.Counter;
     using ECDSA for bytes;
     using ECDSA for bytes32;
-    using SafeMath for uint256;
 
     Counters.Counter private currentTokenId;
     Counters.Counter private reserveTokenId;
-
-    uint public balance;
 
     // roles
     // DEFAULT_ADMIN_ROLE = 0x00
@@ -94,16 +90,6 @@ contract ClassicalNFT is
         _grantRole(SWITCH_MINT_ROLE, msg.sender);
     }
 
-    // // ERC2981 implementation
-    // function royaltyInfo(
-    //     uint256,
-    //     uint256 _salePrice
-    // ) external view override returns (address receiver, uint256 royaltyAmount) {
-    //     // Calculate royalty amount as a percentage of the sale price
-    //     uint256 _royaltyAmount = _salePrice.mul(ROYALTY_PERCENTAGE).div(100);
-    //     return (address(this), _royaltyAmount);
-    // }
-
     //set addresses to whiteList
     function addToWhitelist(address[] calldata _addrArr) external onlyOwner {
         for (uint256 i = 0; i < _addrArr.length; i++) {
@@ -168,9 +154,7 @@ contract ClassicalNFT is
 
     function mint(
         address _recipient,
-        address royaltyRecipient, // 创作者地址，方便版税设置，官方 mint 地址就是官方，如果未来 UGC 个人 mint 就是个人地址
-        string memory _bookId,
-        uint96 royaltyValue
+        string memory _bookId
     ) public payable nonReentrant returns (uint256) {
         require(isMintEnabled, "Minting not enabled");
         require(currentSupply <= maxSupply, "Max supply reached");
@@ -191,19 +175,9 @@ contract ClassicalNFT is
         _safeMint(_recipient, tokenId);
         tokenToBook[tokenId] = _bookId;
         currentSupply++;
-        // if (royaltyValue > 0) {
-        //     _setTokenRoyalty(tokenId, royaltyRecipient, royaltyValue);
-        // }
         emit MintEvent(_recipient, tokenId, _bookId);
         return tokenId;
     }
-
-    // function setDefaultRoyalty(
-    //     address receiver,
-    //     uint96 feeNumerator
-    // ) public onlyOwner {
-    //     super._setDefaultRoyalty(receiver, feeNumerator);
-    // }
 
     function mintReserve(
         address _recipient,
@@ -259,42 +233,29 @@ contract ClassicalNFT is
         return super.supportsInterface(interfaceId);
     }
 
-    // function setTokenRoyalty(
-    //     uint256 tokenId,
-    //     address receiver,
-    //     uint96 feeNumerator
-    // ) public onlyOwner {
-    //     _setTokenRoyalty(tokenId, receiver, feeNumerator);
-    // }
-
-    function transferFrom(
-        address from,
-        address to,
-        uint256 tokenId
-    ) public override {
-        require(
-            _isApprovedOrOwner(msg.sender, tokenId),
-            "Transfer caller is not owner nor approved"
-        );
-        require(_exists(tokenId), "Token ID does not exist");
-        // (address royaltyRecipient, uint256 royaltyAmount) = royaltyInfo(
-        //     tokenId,
-        //     msg.value
-        // );
-        // payable(royaltyRecipient).transfer(royaltyAmount);
-
-        _transfer(from, to, tokenId);
+    function setTokenRoyalty(
+        uint256 tokenId,
+        address receiver,
+        uint96 feeNumerator
+    ) public onlyOwner {
+        _setTokenRoyalty(tokenId, receiver, feeNumerator);
     }
 
+    // receiver 搞一个版税地址
+    function setDefaultRoyalty(uint96 feeNumerator) public onlyOwner {
+        super._setDefaultRoyalty(treasuryAddress, feeNumerator);
+    }
+
+    // function batchConfig(uint96 feeNumerator) public onlyOwner {
+    //     super._setDefaultRoyalty(treasuryAddress, feeNumerator);
+    // }
+
     fallback() external payable {
-        console.log("-----fallback");
         emit Track("fallback()", msg.sender, msg.value, msg.data);
         revert();
     }
 
     receive() external payable {
-        console.log("-----receive");
-        balance += msg.value;
         emit Track("receive()", msg.sender, msg.value, "");
     }
 }
