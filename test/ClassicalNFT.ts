@@ -107,14 +107,24 @@ describe("ClassicalNFT", () => {
    * @param privateKey
    * @returns
    */
-  async function signMsgFromAddress(msg: string, privateKey: string) {
+  async function signMsgFromAddress(
+    msg: string,
+    bookId: string,
+    privateKey: string
+  ) {
     const signingKey = new SigningKey(privateKey);
-    const message = ethers.utils.solidityKeccak256(["address"], [msg]);
+    const message = ethers.utils.solidityKeccak256(
+      ["address", "string"],
+      [msg, bookId]
+    );
     const data = ethers.utils.arrayify(message);
     const hashData = hashMessage(data);
     const digestData = signingKey.signDigest(hashData);
     const signature = joinSignature(digestData);
 
+    const recoveredAddress = utils.recoverAddress(hashData, signature);
+
+    console.log("recoveredAddress:", recoveredAddress);
     console.log("data:", data);
     console.log("data length:", data.length);
     console.log("hashData:", hashData);
@@ -207,16 +217,18 @@ describe("ClassicalNFT", () => {
       // }
 
       // 3、------------------------针对 address 验证------------------------
+      const bookId = "bookid1";
       const sigedMsg = signMsgFromAddress(
         owner.address, //msg.sender
+        bookId,
         privateKey
       );
 
-      const verifyRtn = await classicalNFT._verifyAddress(sigedMsg);
+      const verifyRtn = await classicalNFT._verifySignMsg(sigedMsg, bookId);
       // const verifyRtn = await classicalNFT._verify2(sigedMsg);
 
       // 对应的合约代码
-      //   function _verifyAddress(bytes memory signature) public view returns (bool verified) {
+      //   function _verifySignMsg(bytes memory signature) public view returns (bool verified) {
       //     bytes memory prefix = "\x19Ethereum Signed Message:\n32";
       //     bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, keccak256( abi.encodePacked(msg.sender))));
       //     address calculated_public_key = ECDSA.recover(prefixedHash, signature); // same： prefixedHash.recover(signature)

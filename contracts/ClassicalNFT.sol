@@ -106,18 +106,20 @@ contract ClassicalNFT is
     }
 
     // TODO:need use internal
-    function _verifyAddress(bytes memory signature) public view returns (bool) {
-        bytes32 data = keccak256(abi.encodePacked(msg.sender));
+    function _verifySignMsg(
+        bytes memory signature,
+        string memory _bookId
+    ) public view returns (bool) {
+        bytes32 data = keccak256(abi.encodePacked(msg.sender, _bookId));
         bytes32 dataHash = data.toEthSignedMessageHash();
         address recoverAdd = dataHash.recover(signature);
         return recoverAdd == public_key;
     }
 
     //remove addresses to whiteList
-    function removeFromWhitelist(address[] calldata _addrArr)
-        external
-        onlyOwner
-    {
+    function removeFromWhitelist(
+        address[] calldata _addrArr
+    ) external onlyOwner {
         for (uint256 i = 0; i < _addrArr.length; i++) {
             _revokeRole(FREE_MINT_ROLE, _addrArr[i]);
         }
@@ -152,16 +154,17 @@ contract ClassicalNFT is
         emit SetMintPrice(mintPrice);
     }
 
-    function mint(address _recipient, string memory _bookId)
-        public
-        payable
-        nonReentrant
-        returns (uint256)
-    {
+    function mint(
+        address _recipient,
+        string memory _bookId,
+        bytes memory signature
+    ) public payable nonReentrant returns (uint256) {
         require(isMintEnabled, "Minting not enabled");
         require(currentSupply <= maxSupply, "Max supply reached");
-        // bytes memory signature
-        // require(_verifyAddress(signature), "xxxxx");
+        require(
+            _verifySignMsg(signature, _bookId),
+            "Verify sign message is fail, please check _bookId or signature message."
+        );
 
         console.log("--------------");
         console.log(msg.sender);
@@ -191,11 +194,10 @@ contract ClassicalNFT is
         return tokenId;
     }
 
-    function mintReserve(address _recipient, string memory _bookId)
-        external
-        onlyOwner
-        returns (uint256)
-    {
+    function mintReserve(
+        address _recipient,
+        string memory _bookId
+    ) external onlyOwner returns (uint256) {
         require(isMintEnabled, "Minting not enabled");
         require(currentSupply <= maxSupply, "Max supply reached");
 
@@ -239,24 +241,18 @@ contract ClassicalNFT is
     }
 
     /// @dev Overridden in order to make it an onlyOwner function
-    function withdrawPayments(address payable _payee)
-        public
-        virtual
-        override
-        onlyOwner
-    {
+    function withdrawPayments(
+        address payable _payee
+    ) public virtual override onlyOwner {
         // 先取
         super.withdrawPayments(payable(address(this)));
         // 再转
         _payee.transfer(address(this).balance);
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(ERC721, ERC2981, AccessControl)
-        returns (bool)
-    {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view override(ERC721, ERC2981, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
