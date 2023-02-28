@@ -38,10 +38,6 @@ describe("ClassicalNFT", () => {
   const ADDRESS_ZERO = ethers.constants.AddressZero;
 
   async function deployClassicalNFTFixture() {
-    ClassicalNFT = await ethers.getContractFactory("ClassicalNFT");
-    classicalNFT = await ClassicalNFT.deploy();
-    await classicalNFT.deployed();
-
     [
       owner,
       royaltiesRecipient,
@@ -49,6 +45,14 @@ describe("ClassicalNFT", () => {
       treasuryAddress,
       otherAccount,
     ] = await ethers.getSigners();
+
+    ClassicalNFT = await ethers.getContractFactory("ClassicalNFT");
+    classicalNFT = await ClassicalNFT.deploy(
+      treasuryAddress.address,
+      publicGoodAddress.address,
+      300
+    );
+    await classicalNFT.deployed();
 
     const ONE_GWEI = 1_000_000_000;
 
@@ -95,11 +99,11 @@ describe("ClassicalNFT", () => {
     ]);
     // const signedMessageHex = signedMessage.toString("hex");
     const signedMessageArrayify = utils.arrayify(signedMessage);
-    console.log(
-      "signedMessageArrayify:",
-      signedMessageArrayify,
-      signedMessageArrayify.length
-    );
+    // console.log(
+    //   "signedMessageArrayify:",
+    //   signedMessageArrayify,
+    //   signedMessageArrayify.length
+    // );
     return signedMessageArrayify;
   }
 
@@ -127,16 +131,15 @@ describe("ClassicalNFT", () => {
     const digestData = signingKey.signDigest(hashData);
     const signature = joinSignature(digestData);
 
-    const recoveredAddress = utils.recoverAddress(hashData, signature);
-
-    console.log("recoveredAddress:", recoveredAddress);
-    console.log("data:", data);
-    console.log("data length:", data.length);
-    console.log("hashData:", hashData);
-    console.log("hashData length:", hashData.length);
-    console.log("digestData:", digestData);
-    console.log("signature:", signature);
-    console.log("signature length:", signature.length);
+    // const recoveredAddress = utils.recoverAddress(hashData, signature);
+    // console.log("recoveredAddress:", recoveredAddress);
+    // console.log("data:", data);
+    // console.log("data length:", data.length);
+    // console.log("hashData:", hashData);
+    // console.log("hashData length:", hashData.length);
+    // console.log("digestData:", digestData);
+    // console.log("signature:", signature);
+    // console.log("signature length:", signature.length);
 
     return signature;
   }
