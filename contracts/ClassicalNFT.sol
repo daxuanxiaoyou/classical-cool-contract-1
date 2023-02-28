@@ -53,6 +53,8 @@ contract ClassicalNFT is
 
     /// store tokenid --> bookId
     mapping(uint256 => string) public tokenToBook;
+    mapping(string => bool) public bookList;
+    string[] bookIds;
     event Track(
         string indexed _function,
         address sender,
@@ -161,17 +163,12 @@ contract ClassicalNFT is
     ) public payable nonReentrant returns (uint256) {
         require(isMintEnabled, "Minting not enabled");
         require(currentSupply <= maxSupply, "Max supply reached");
+        require(!bookList[_bookId], "Book id exist");
         require(
             _verifySignMsg(signature, _bookId),
             "Verify sign message is fail, please check _bookId or signature message."
         );
 
-        console.log("--------------");
-        console.log(msg.sender);
-        console.log(msg.value);
-        console.log(mintPrice);
-        console.log(_recipient);
-        console.log(_bookId);
         // tokenId ++
         currentTokenId.increment();
         // reserve 100 NFTs from 1 ~ 100
@@ -187,11 +184,23 @@ contract ClassicalNFT is
         // mint nft
         _safeMint(_recipient, tokenId);
         tokenToBook[tokenId] = _bookId;
+        bookList[_bookId] = true;
+        bookIds.push(_bookId);
         currentSupply++;
         emit MintEvent(_recipient, tokenId, _bookId);
-        console.log("--------->>>>");
+        console.log("--------------");
+        console.log(msg.sender);
+        console.log(msg.value);
+        console.log(mintPrice);
+        console.log(_recipient);
+        console.log(_bookId);
+        console.log(bookIds.length);
         console.log(tokenId);
         return tokenId;
+    }
+
+    function getBookList() public view returns (string[] memory) {
+        return bookIds;
     }
 
     function mintReserve(

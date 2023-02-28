@@ -11,12 +11,18 @@ import {
 } from "ethers/lib/utils";
 import { SigningKey } from "@ethersproject/signing-key";
 import { serialize } from "@ethersproject/transactions";
+const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 import dotenv from "dotenv";
 dotenv.config();
 
 const _INTERFACE_ID_ERC165 = "0x01ffc9a7";
 const _INTERFACE_ID_ROYALTIES_EIP2981 = "0x2a55205a";
 const _INTERFACE_ID_ERC721 = "0x80ac58cd";
+const privateKey =
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; //localhost 的私钥
+// const privateKey = `0x${process.env.ACCOUNT_PRIVATE_KEY}` || "";
+const privateKeyNo0x =
+  "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
 // import { keccak256 } from "@ethersproject/keccak256";
 
@@ -31,7 +37,11 @@ describe("ClassicalNFT", () => {
   let ClassicalNFTedAmount: number;
   const ADDRESS_ZERO = ethers.constants.AddressZero;
 
-  beforeEach(async () => {
+  async function deployClassicalNFTFixture() {
+    ClassicalNFT = await ethers.getContractFactory("ClassicalNFT");
+    classicalNFT = await ClassicalNFT.deploy();
+    await classicalNFT.deployed();
+
     [
       owner,
       royaltiesRecipient,
@@ -40,30 +50,25 @@ describe("ClassicalNFT", () => {
       otherAccount,
     ] = await ethers.getSigners();
 
-    ClassicalNFT = await ethers.getContractFactory("ClassicalNFT");
-    classicalNFT = await ClassicalNFT.deploy();
-    await classicalNFT.deployed();
-
-    await deployments.fixture();
-
-    // ClassicalNFT = await deployments.get("ClassicalNFT");
-    // classicalNFT = await ethers.getContractAt(
-    //   "ClassicalNFT",
-    //   ClassicalNFT.address,
-    //   owner
-    // );
-
     const ONE_GWEI = 1_000_000_000;
 
     ClassicalNFTedAmount = ONE_GWEI;
 
-    // return { classicalNFT, ClassicalNFTedAmount, owner, otherAccount };
-  });
+    // Fixtures can return anything you consider useful for your tests
+    return {
+      ClassicalNFT,
+      classicalNFT,
+      owner,
+      royaltiesRecipient,
+      publicGoodAddress,
+      treasuryAddress,
+      otherAccount,
+    };
+  }
 
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
-  async function deployClassicalNFTFixture() {}
 
   /**
    * 长度太大了，达到了 193，导致签名失败，底层实现比这个要复杂的多。
@@ -177,16 +182,16 @@ describe("ClassicalNFT", () => {
       expect(pk).to.equal(owner.address);
     });
     it("verify sign message", async function () {
-      // const { classicalNFT, owner } = await loadFixture(
-      //   deployClassicalNFTFixture
-      // );
+      const {
+        ClassicalNFT,
+        classicalNFT,
+        owner,
+        royaltiesRecipient,
+        publicGoodAddress,
+        treasuryAddress,
+        otherAccount,
+      } = await loadFixture(deployClassicalNFTFixture);
       await classicalNFT.setPublicKey(owner.address);
-
-      const privateKey =
-        "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; //localhost 的私钥
-      // const privateKey = `0x${process.env.ACCOUNT_PRIVATE_KEY}` || "";
-      const privateKeyNo0x =
-        "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
       // 1、------------------------全部自己实现的逻辑 ------------------------
       // const sigedMsg = signMsgFromString(
@@ -252,9 +257,9 @@ describe("ClassicalNFT", () => {
     });
 
     it("Should royalty success", async function () {
-      // const { classicalNFT, owner } = await loadFixture(
-      //   deployClassicalNFTFixture
-      // );
+      const { classicalNFT, owner } = await loadFixture(
+        deployClassicalNFTFixture
+      );
 
       await classicalNFT.setPublicKey(owner.address);
       const pk = await classicalNFT.getPublickey();
@@ -263,18 +268,80 @@ describe("ClassicalNFT", () => {
     });
 
     it("Should receive and store the funds to ClassicalNFT", async function () {
-      // const { ClassicalNFT, ClassicalNFTedAmount } = await loadFixture(
-      //   deployClassicalNFTFixture
-      // );
+      const { ClassicalNFT, ClassicalNFTedAmount } = await loadFixture(
+        deployClassicalNFTFixture
+      );
 
       expect(await ethers.provider.getBalance(ClassicalNFT.address)).to.equal(
         ClassicalNFTedAmount
       );
     });
   });
+  describe("Mint", function () {
+    it("Should mint only once", async function () {
+      const {
+        ClassicalNFT,
+        classicalNFT,
+        owner,
+        royaltiesRecipient,
+        publicGoodAddress,
+        treasuryAddress,
+        otherAccount,
+      } = await loadFixture(deployClassicalNFTFixture);
+      await classicalNFT.setPublicKey(owner.address);
+      const bookId = "bookid1";
+      const sigedMsg = signMsgFromAddress(
+        owner.address, //msg.sender
+        bookId,
+        privateKey
+      );
+
+      const tx1 = await classicalNFT.mint(owner.address, bookId, sigedMsg, {
+        value: ethers.utils.parseEther("0.0002"),
+      });
+
+      await tx1.wait();
+
+      // 第二次 mint 会提示错误
+      const tx2 = classicalNFT.mint(owner.address, bookId, sigedMsg, {
+        value: ethers.utils.parseEther("0.0002"),
+      });
+
+      await expect(tx2).to.be.revertedWith("Book id exist");
+    });
+    it("Mint success", async function () {
+      const { classicalNFT, owner } = await loadFixture(
+        deployClassicalNFTFixture
+      );
+      await classicalNFT.setPublicKey(owner.address);
+      const bookId1 = "bookid1";
+      const bookId2 = "bookid2";
+      const sigedMsg1 = signMsgFromAddress(
+        owner.address, //msg.sender
+        bookId1,
+        privateKey
+      );
+      const sigedMsg2 = signMsgFromAddress(
+        owner.address, //msg.sender
+        bookId2,
+        privateKey
+      );
+      await classicalNFT.mint(owner.address, bookId1, sigedMsg1, {
+        value: ethers.utils.parseEther("0.0002"),
+      });
+
+      await classicalNFT.mint(owner.address, bookId2, sigedMsg2, {
+        value: ethers.utils.parseEther("0.0002"),
+      });
+
+      const getBookList = await classicalNFT.getBookList();
+      await expect(getBookList).to.be.contains(bookId1).to.be.contains(bookId2);
+    });
+  });
 
   describe("Royalties", function () {
     it("has all the right interfaces", async function () {
+      const { classicalNFT } = await loadFixture(deployClassicalNFTFixture);
       expect(
         await classicalNFT.supportsInterface(_INTERFACE_ID_ERC165),
         "Error Royalties 165"
@@ -291,6 +358,7 @@ describe("ClassicalNFT", () => {
       ).to.be.true;
     });
     it("throws if royalty fee will exceed salePrice", async function () {
+      const { classicalNFT } = await loadFixture(deployClassicalNFTFixture);
       const tx = classicalNFT.setDefaultRoyalty(10001);
 
       await expect(tx).to.be.revertedWith(
