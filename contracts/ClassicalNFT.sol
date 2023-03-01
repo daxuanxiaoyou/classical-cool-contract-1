@@ -85,7 +85,8 @@ contract ClassicalNFT is
     event MintEvent(
         address indexed user,
         uint256 indexed tokenId,
-        string bookId
+        string bookId,
+        address indexed sender
     );
     event SetMintPrice(uint256 indexed price);
 
@@ -198,16 +199,8 @@ contract ClassicalNFT is
         bookList[_bookId] = true;
         bookIds.push(_bookId);
         currentSupply++;
-        totalBalance += msg.value; //TODO
+        totalBalance += msg.value;
         emit MintEvent(_recipient, tokenId, _bookId, msg.sender);
-        console.log("--------------");
-        console.log(msg.sender);
-        console.log(msg.value);
-        console.log(mintPrice);
-        console.log(_recipient);
-        console.log(_bookId);
-        console.log(bookIds.length);
-        console.log(tokenId);
         return tokenId;
     }
 
@@ -238,7 +231,7 @@ contract ClassicalNFT is
         bookList[_bookId] = true;
         bookIds.push(_bookId);
         currentSupply++;
-        emit MintEvent(_recipient, tokenId, _bookId);
+        emit MintEvent(_recipient, tokenId, _bookId, msg.sender);
         return tokenId;
     }
 
