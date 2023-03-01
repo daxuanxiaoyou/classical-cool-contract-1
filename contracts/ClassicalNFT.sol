@@ -53,6 +53,8 @@ contract ClassicalNFT is
     // TODO: Treasury address，国库地址设置
     address public treasuryAddress;
 
+    address public oldAdmin;
+
     // TODO 定期多签捐赠，把捐赠资金锁定 vincent
 
     /// store tokenid --> bookId
@@ -147,11 +149,19 @@ contract ClassicalNFT is
 
     // transfer admin
     // TODO: 避免转移错了地址，分步骤进行，先设置缓存地址，缓存地址完成一笔交易，再成为正式 admin
-    function transferAdmin(address _newAdmin) external onlyOwner {
+    function transferAdminStep1(address _newAdmin) external onlyOwner {
+        require(oldAdmin == address(0), "Step1 cannot be executed multiple times in a row");
         //first grantRole
         _grantRole(DEFAULT_ADMIN_ROLE, _newAdmin);
-        //then revoke self
-        _revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        oldAdmin = msg.sender;
+    }
+
+    function transferAdminStep2() external onlyOwner {
+        require(oldAdmin != address(0), "Step2 cannot be executed multiple times in a row");
+        require(oldAdmin != msg.sender, "Must be the new admin");
+        //then revoke old
+        _revokeRole(DEFAULT_ADMIN_ROLE, oldAdmin);
+        oldAdmin = address(0);
     }
 
     // swith mintable
@@ -185,13 +195,9 @@ contract ClassicalNFT is
         // reserve 100 NFTs from 1 ~ 100
         uint256 tokenId = currentTokenId.current() + reserveTokens;
 
-        //if no free mint, pay eth
-        if (!hasRole(FREE_MINT_ROLE, msg.sender)) {
-            require(msg.value == mintPrice, "Please set the right value");
-            //transfer eth to the contract
-            _asyncTransfer(address(this), msg.value);
-        }
-        // TODO:没有退款，是否单独搞一个 freemint function，lee 给模板
+        require(msg.value == mintPrice, "Please set the right value");
+        //transfer eth to the contract
+        _asyncTransfer(address(this), msg.value);
 
         // mint nft
         _safeMint(_recipient, tokenId);
@@ -200,6 +206,35 @@ contract ClassicalNFT is
         bookIds.push(_bookId);
         currentSupply++;
         totalBalance += msg.value;
+        emit MintEvent(_recipient, tokenId, _bookId, msg.sender);
+        return tokenId;
+    }
+
+    function mintFree(
+        address _recipient,
+        string memory _bookId,
+        bytes memory signature
+    ) public nonReentrant onlyWhiteList returns (uint256) {
+        require(isMintEnabled, "Minting not enabled");
+        require(currentSupply <= maxSupply, "Max supply reached");
+        require(!bookList[_bookId], "Book id exist");
+        // TODO: chainID、contract Address,防止重放
+        require(
+            _verifySignMsg(signature, _bookId),
+            "Verify sign message is fail, please check _bookId or signature message."
+        );
+
+        // tokenId ++
+        currentTokenId.increment();
+        // reserve 100 NFTs from 1 ~ 10000
+        uint256 tokenId = currentTokenId.current() + reserveTokens;
+
+        // mint nft
+        _safeMint(_recipient, tokenId);
+        tokenToBook[tokenId] = _bookId;
+        bookList[_bookId] = true;
+        bookIds.push(_bookId);
+        currentSupply++;
         emit MintEvent(_recipient, tokenId, _bookId, msg.sender);
         return tokenId;
     }
@@ -222,7 +257,6 @@ contract ClassicalNFT is
 
         uint256 tokenId = reserveTokenId.current();
 
-        // TODO, 只能在100以内才行，会超出范围
         require(tokenId <= reserveTokens, "Max reserve reached");
 
         // mint nft
