@@ -116,9 +116,13 @@ contract ClassicalNFT is
     // TODO:need use internal
     function _verifySignMsg(
         bytes memory signature,
-        string memory _bookId
+        string memory _bookId,
+        address classicalNFTAddr,
+        uint chainId
     ) public view returns (bool) {
-        bytes32 data = keccak256(abi.encodePacked(msg.sender, _bookId));
+        bytes32 data = keccak256(
+            abi.encodePacked(msg.sender, _bookId, classicalNFTAddr, chainId)
+        );
         bytes32 dataHash = data.toEthSignedMessageHash();
         address recoverAdd = dataHash.recover(signature);
         return recoverAdd == public_key;
@@ -181,15 +185,16 @@ contract ClassicalNFT is
     function mint(
         address _recipient,
         string memory _bookId,
-        bytes memory signature
+        bytes memory signature,
+        address classicalNFTAddr,
+        uint chainId
     ) public payable nonReentrant returns (uint256) {
         require(isMintEnabled, "Minting not enabled");
         require(currentSupply <= maxSupply, "Max supply reached");
         require(!bookList[_bookId], "Book id exist");
-        // TODO: chainID、contract Address,防止重放
         require(
-            _verifySignMsg(signature, _bookId),
-            "Verify sign message is fail, please check _bookId or signature message."
+            _verifySignMsg(signature, _bookId, classicalNFTAddr, chainId),
+            "Verify sign message is fail, please check _bookId or signature or classicalNFTAddr or chainId."
         );
 
         // tokenId ++
@@ -215,15 +220,16 @@ contract ClassicalNFT is
     function mintFree(
         address _recipient,
         string memory _bookId,
-        bytes memory signature
+        bytes memory signature,
+        address classicalNFTAddr,
+        uint chainId
     ) public nonReentrant onlyWhiteList returns (uint256) {
         require(isMintEnabled, "Minting not enabled");
         require(currentSupply <= maxSupply, "Max supply reached");
         require(!bookList[_bookId], "Book id exist");
-        // TODO: chainID、contract Address,防止重放
         require(
-            _verifySignMsg(signature, _bookId),
-            "Verify sign message is fail, please check _bookId or signature message."
+            _verifySignMsg(signature, _bookId, classicalNFTAddr, chainId),
+            "Verify sign message is fail, please check _bookId or signature or classicalNFTAddr or chainId."
         );
 
         // tokenId ++
@@ -314,14 +320,12 @@ contract ClassicalNFT is
 
     function setTokenRoyalty(
         uint256 tokenId,
-        // address receiver,
         uint96 feeNumerator
     ) public onlyOwner {
         // TODO: 直接到国库，会导致 donate 无法计算，_asynctransfer 的地址和 receiver 不一样？
         _setTokenRoyalty(tokenId, address(this), feeNumerator);
     }
 
-    // receiver 搞一个版税地址
     // TODO: 同上
     function setDefaultRoyalty(uint96 feeNumerator) public onlyOwner {
         super._setDefaultRoyalty(address(this), feeNumerator);

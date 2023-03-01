@@ -25,9 +25,11 @@ const config: HardhatUserConfig = {
   defaultNetwork: "goerli",
   networks: {
     hardhat: {
+      chainId: 31337,
       allowUnlimitedContractSize: true,
     },
     localhost: {
+      chainId: 31337,
       allowUnlimitedContractSize: true,
     },
     goerli: {

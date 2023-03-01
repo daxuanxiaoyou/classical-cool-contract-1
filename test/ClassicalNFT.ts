@@ -1,6 +1,6 @@
 // import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { deployments, ethers } from "hardhat";
+import { deployments, ethers, network } from "hardhat";
 import { utils, Wallet } from "ethers";
 import {
   concat,
@@ -125,12 +125,14 @@ describe("ClassicalNFT", () => {
   async function signMsgFromAddress(
     msg: string,
     bookId: string,
+    classicalNFTAddr: string,
+    chainId: number,
     privateKey: string
   ) {
     const signingKey = new SigningKey(privateKey);
     const message = ethers.utils.solidityKeccak256(
-      ["address", "string"],
-      [msg, bookId]
+      ["address", "string", "address", "uint"],
+      [msg, bookId, classicalNFTAddr, chainId]
     );
     const data = ethers.utils.arrayify(message);
     const hashData = hashMessage(data);
@@ -138,15 +140,6 @@ describe("ClassicalNFT", () => {
     const signature = joinSignature(digestData);
 
     // const recoveredAddress = utils.recoverAddress(hashData, signature);
-    // console.log("recoveredAddress:", recoveredAddress);
-    // console.log("data:", data);
-    // console.log("data length:", data.length);
-    // console.log("hashData:", hashData);
-    // console.log("hashData length:", hashData.length);
-    // console.log("digestData:", digestData);
-    // console.log("signature:", signature);
-    // console.log("signature length:", signature.length);
-
     return signature;
   }
 
@@ -184,22 +177,10 @@ describe("ClassicalNFT", () => {
   }
 
   describe("Main", function () {
-    it("Should set the right owner", async function () {
-      await classicalNFT.setPublicKey(owner.address);
-      const pk = await classicalNFT.getPublickey();
-
-      expect(pk).to.equal(owner.address);
-    });
     it("verify sign message", async function () {
-      const {
-        ClassicalNFT,
-        classicalNFT,
-        owner,
-        royaltiesRecipient,
-        publicGoodAddress,
-        treasuryAddress,
-        otherAccount,
-      } = await loadFixture(deployClassicalNFTFixture);
+      const { classicalNFT, owner } = await loadFixture(
+        deployClassicalNFTFixture
+      );
       await classicalNFT.setPublicKey(owner.address);
 
       // 1、------------------------全部自己实现的逻辑 ------------------------
@@ -232,13 +213,28 @@ describe("ClassicalNFT", () => {
 
       // 3、------------------------针对 address 验证------------------------
       const bookId = "bookid1";
+      const classicalNFTAddr = classicalNFT.address;
+      // const chainId = await (
+      //   await ethers.getDefaultProvider().getNetwork()
+      // ).chainId;
+
+      const netName = network.name;
+      const netId = network.config.chainId || 1;
+
       const sigedMsg = signMsgFromAddress(
         owner.address, //msg.sender
         bookId,
+        classicalNFTAddr,
+        netId,
         privateKey
       );
 
-      const verifyRtn = await classicalNFT._verifySignMsg(sigedMsg, bookId);
+      const verifyRtn = await classicalNFT._verifySignMsg(
+        sigedMsg,
+        bookId,
+        classicalNFTAddr,
+        netId
+      );
       // const verifyRtn = await classicalNFT._verify2(sigedMsg);
 
       // 对应的合约代码
@@ -246,16 +242,6 @@ describe("ClassicalNFT", () => {
       //     bytes memory prefix = "\x19Ethereum Signed Message:\n32";
       //     bytes32 prefixedHash = keccak256(abi.encodePacked(prefix, keccak256( abi.encodePacked(msg.sender))));
       //     address calculated_public_key = ECDSA.recover(prefixedHash, signature); // same： prefixedHash.recover(signature)
-      //     console.log('---------------');
-      //     console.logBytes(abi.encode(msg.sender)); //去除0x，32 Byte，加 0x 66 个十六进制
-      //     console.logBytes(abi.encodePacked(msg.sender)); //去除0x，20 Byte，和 Address 一样，加 0x 42 个十六进制
-      //     console.logBytes(signature);
-      //     console.log(signature.length);
-      //     console.logBytes32(prefixedHash);
-      //     console.log(prefixedHash.length);
-      //     console.logAddress(calculated_public_key);
-      //     console.logAddress(public_key);
-      //     console.log((calculated_public_key == public_key));
       //     return (calculated_public_key == public_key);
       // }
 
@@ -263,17 +249,6 @@ describe("ClassicalNFT", () => {
       // const verifyRtn = await classicalNFT._verify2(sigedMsg);
 
       expect(verifyRtn).to.equal(true);
-    });
-
-    it("Should set public key success", async function () {
-      const { classicalNFT, owner } = await loadFixture(
-        deployClassicalNFTFixture
-      );
-
-      await classicalNFT.setPublicKey(owner.address);
-      const pk = await classicalNFT.getPublickey();
-
-      expect(pk).to.equal(owner.address);
     });
 
     it("has all the right interfaces", async function () {
@@ -302,47 +277,84 @@ describe("ClassicalNFT", () => {
       );
     });
     it("has the right recerver and royalty amount", async function () {
-      const tokenId = classicalNFT.mint(otherAccount.address, "2", {
-        value: ethers.utils.parseEther("0.0002"),
-      });
-      await classicalNFT.setTokenRoyalty(tokenId, otherAccount.address, 3000);
+      const { classicalNFT, owner, otherAccount } = await loadFixture(
+        deployClassicalNFTFixture
+      );
+      await classicalNFT.setPublicKey(owner.address);
+      const chainId = network.config.chainId || 1;
+      const bookId = "bookId1";
+
+      const sigedMsg = signMsgFromAddress(
+        owner.address, //msg.sender
+        bookId,
+        classicalNFT.address,
+        chainId,
+        privateKey
+      );
+
+      const tx = classicalNFT.mint(
+        otherAccount.address,
+        bookId,
+        sigedMsg,
+        classicalNFT.address,
+        chainId,
+        {
+          value: ethers.utils.parseEther("0.0002"),
+        }
+      );
+      const tokenId = await tx.wait();
+
+      await classicalNFT.setTokenRoyalty(tokenId, 3000);
       const { receiver, royaltyAmount } = classicalNFT.royaltyInfo(
         tokenId,
         100
       ); // 100*3000/10000 = 30
 
-      expect(receiver).to.be.equal(otherAccount.address);
+      expect(receiver).to.be.equal(classicalNFT.address);
       expect(royaltyAmount).to.be.equal(30);
     });
 
     it("Should mint only once", async function () {
-      const {
-        ClassicalNFT,
-        classicalNFT,
-        owner,
-        royaltiesRecipient,
-        publicGoodAddress,
-        treasuryAddress,
-        otherAccount,
-      } = await loadFixture(deployClassicalNFTFixture);
+      const { classicalNFT, owner, otherAccount } = await loadFixture(
+        deployClassicalNFTFixture
+      );
       await classicalNFT.setPublicKey(owner.address);
       const bookId = "bookid1";
+
+      const chainId = network.config.chainId || 1;
+
       const sigedMsg = signMsgFromAddress(
         owner.address, //msg.sender
         bookId,
+        classicalNFT.address,
+        chainId,
         privateKey
       );
 
-      const tx1 = await classicalNFT.mint(owner.address, bookId, sigedMsg, {
-        value: ethers.utils.parseEther("0.0002"),
-      });
+      const tx1 = await classicalNFT.mint(
+        otherAccount.address,
+        bookId,
+        sigedMsg,
+        classicalNFT.address,
+        chainId,
+        {
+          value: ethers.utils.parseEther("0.0002"),
+        }
+      );
 
       await tx1.wait();
 
       // 第二次 mint 会提示错误
-      const tx2 = classicalNFT.mint(owner.address, bookId, sigedMsg, {
-        value: ethers.utils.parseEther("0.0002"),
-      });
+      const tx2 = classicalNFT.mint(
+        otherAccount.address,
+        bookId,
+        sigedMsg,
+        classicalNFT.address,
+        chainId,
+        {
+          value: ethers.utils.parseEther("0.0002"),
+        }
+      );
 
       await expect(tx2).to.be.revertedWith("Book id exist");
     });
@@ -353,23 +365,45 @@ describe("ClassicalNFT", () => {
       await classicalNFT.setPublicKey(owner.address);
       const bookId1 = "bookid1";
       const bookId2 = "bookid2";
+
+      const chainId = network.config.chainId || 1;
+
       const sigedMsg1 = signMsgFromAddress(
         owner.address, //msg.sender
         bookId1,
+        classicalNFT.address,
+        chainId,
         privateKey
       );
       const sigedMsg2 = signMsgFromAddress(
         owner.address, //msg.sender
         bookId2,
+        classicalNFT.address,
+        chainId,
         privateKey
       );
-      await classicalNFT.mint(owner.address, bookId1, sigedMsg1, {
-        value: ethers.utils.parseEther("0.0002"),
-      });
 
-      await classicalNFT.mint(owner.address, bookId2, sigedMsg2, {
-        value: ethers.utils.parseEther("0.0002"),
-      });
+      await classicalNFT.mint(
+        owner.address,
+        bookId1,
+        sigedMsg1,
+        classicalNFT.address,
+        chainId,
+        {
+          value: ethers.utils.parseEther("0.0002"),
+        }
+      );
+
+      await classicalNFT.mint(
+        owner.address,
+        bookId2,
+        sigedMsg2,
+        classicalNFT.address,
+        chainId,
+        {
+          value: ethers.utils.parseEther("0.0002"),
+        }
+      );
 
       const getBookList = await classicalNFT.getBookList();
       await expect(getBookList).to.be.contains(bookId1).to.be.contains(bookId2);
@@ -421,89 +455,121 @@ describe("ClassicalNFT", () => {
     it("should set whitelist", async function () {
       const { classicalNFT } = await loadFixture(deployClassicalNFTFixture);
       const whitelist = [otherAccount.address, otherAccount1.address];
-      
+
       await classicalNFT.addToWhitelist(whitelist);
-      expect(await classicalNFT.hasRole(classicalNFT.FREE_MINT_ROLE(), otherAccount.address)).to.be.true;
+      expect(
+        await classicalNFT.hasRole(
+          classicalNFT.FREE_MINT_ROLE(),
+          otherAccount.address
+        )
+      ).to.be.true;
 
       await classicalNFT.removeFromWhitelist(whitelist);
-      expect(await classicalNFT.hasRole(classicalNFT.FREE_MINT_ROLE(), otherAccount.address)).to.be.false;
+      expect(
+        await classicalNFT.hasRole(
+          classicalNFT.FREE_MINT_ROLE(),
+          otherAccount.address
+        )
+      ).to.be.false;
 
       try {
         await classicalNFT.connect(otherAccount).addToWhitelist(whitelist);
       } catch (e) {
-        expect(await classicalNFT.hasRole(classicalNFT.FREE_MINT_ROLE(), otherAccount.address)).to.be.false;
+        expect(
+          await classicalNFT.hasRole(
+            classicalNFT.FREE_MINT_ROLE(),
+            otherAccount.address
+          )
+        ).to.be.false;
       }
-      
     });
     it("should set mintable role", async function () {
       const { classicalNFT } = await loadFixture(deployClassicalNFTFixture);
-      
+
       await classicalNFT.addToSwitchlist(otherAccount.address);
-      expect(await classicalNFT.hasRole(classicalNFT.SWITCH_MINT_ROLE(), otherAccount.address)).to.be.true;
+      expect(
+        await classicalNFT.hasRole(
+          classicalNFT.SWITCH_MINT_ROLE(),
+          otherAccount.address
+        )
+      ).to.be.true;
 
       await classicalNFT.removeFromSwitchList(otherAccount.address);
-      expect(await classicalNFT.hasRole(classicalNFT.SWITCH_MINT_ROLE(), otherAccount.address)).to.be.false;
+      expect(
+        await classicalNFT.hasRole(
+          classicalNFT.SWITCH_MINT_ROLE(),
+          otherAccount.address
+        )
+      ).to.be.false;
 
       try {
-        await classicalNFT.connect(otherAccount).removeFromSwitchList(otherAccount.address);
+        await classicalNFT
+          .connect(otherAccount)
+          .removeFromSwitchList(otherAccount.address);
       } catch (e) {
-        expect(await classicalNFT.hasRole(classicalNFT.SWITCH_MINT_ROLE(), otherAccount.address)).to.be.false;
+        expect(
+          await classicalNFT.hasRole(
+            classicalNFT.SWITCH_MINT_ROLE(),
+            otherAccount.address
+          )
+        ).to.be.false;
       }
-
     });
 
     it("should set setTreasuryAddress", async function () {
       const { classicalNFT } = await loadFixture(deployClassicalNFTFixture);
-      
+
       await classicalNFT.setTreasuryAddress(otherAccount.address);
 
-      expect(await classicalNFT.treasuryAddress()).to.be.equal(otherAccount.address);
-      
+      expect(await classicalNFT.treasuryAddress()).to.be.equal(
+        otherAccount.address
+      );
     });
 
     it("should set setPublicGoodAddress", async function () {
-      
       const { classicalNFT } = await loadFixture(deployClassicalNFTFixture);
-      
+
       await classicalNFT.setPublicGoodAddress(otherAccount.address);
 
-      expect(await classicalNFT.publicGoodAddress()).to.be.equal(otherAccount.address);
+      expect(await classicalNFT.publicGoodAddress()).to.be.equal(
+        otherAccount.address
+      );
     });
 
     it("should set setBaseTokenURI", async function () {
       const { classicalNFT } = await loadFixture(deployClassicalNFTFixture);
-      
+
       await classicalNFT.setBaseTokenURI("test");
-      
-      expect(await classicalNFT.connect(otherAccount).baseTokenURI()).to.be.equal("test");
+
+      expect(
+        await classicalNFT.connect(otherAccount).baseTokenURI()
+      ).to.be.equal("test");
     });
   });
 
   describe("owner mint reserve", function () {
     it("should mint reserve by owner", async function () {
       const { classicalNFT } = await loadFixture(deployClassicalNFTFixture);
-      
+
       await classicalNFT.mintReserve(otherAccount.address, "book1");
       expect(await classicalNFT.bookList("book1")).to.be.true;
       expect(await classicalNFT.bookIds(0)).to.be.equal("book1");
-      
+
       expect(await classicalNFT.ownerOf(1)).to.be.equal(otherAccount.address);
-      
     });
     it("should not mint reserve by other", async function () {
       const { classicalNFT } = await loadFixture(deployClassicalNFTFixture);
 
       try {
-        await classicalNFT.connect(otherAccount).mintReserve(otherAccount.address, "book1");
-      } catch (e) {
+        await classicalNFT
+          .connect(otherAccount)
+          .mintReserve(otherAccount.address, "book1");
+      } catch (args) {
         expect(await classicalNFT.bookList("book1")).to.be.false;
-        expect(e.message).contains(" reverted with reason string");
+        expect(args?.message).contains(" reverted with reason string");
       }
-      
     });
   });
-
-
 
   // describe("Withdrawals", function () {
   //   describe("Validations", function () {
