@@ -123,7 +123,7 @@ describe("ClassicalNFT", () => {
    * @returns
    */
   async function signMsgFromAddress(
-    msg: string,
+    senderAddress: string,
     bookId: string,
     classicalNFTAddr: string,
     chainId: number,
@@ -132,7 +132,7 @@ describe("ClassicalNFT", () => {
     const signingKey = new SigningKey(privateKey);
     const message = ethers.utils.solidityKeccak256(
       ["address", "string", "address", "uint"],
-      [msg, bookId, classicalNFTAddr, chainId]
+      [senderAddress, bookId, classicalNFTAddr, chainId]
     );
     const data = ethers.utils.arrayify(message);
     const hashData = hashMessage(data);
