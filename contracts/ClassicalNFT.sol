@@ -352,19 +352,19 @@ contract ClassicalNFT is
         // 计算应捐赠的金额
         if (totalBalance < 10 ether) {
             percentage = 10;
-        } else if (totalBalance > 10 && totalBalance < 100 ether) {
+        } else if (totalBalance > 10 && totalBalance <= 100 ether) {
             percentage = 20;
-        } else if (totalBalance > 100 && totalBalance < 1000 ether) {
+        } else if (totalBalance > 100 && totalBalance <= 1000 ether) {
             percentage = 30;
-        } else if (totalBalance > 1000 && totalBalance < 10000 ether) {
+        } else if (totalBalance > 1000 && totalBalance <= 10000 ether) {
             percentage = 40;
-        } else if (totalBalance > 10000 && totalBalance < 100000 ether) {
+        } else if (totalBalance > 10000 && totalBalance <= 100000 ether) {
             percentage = 50;
-        } else if (totalBalance > 100000 && totalBalance < 1000000 ether) {
+        } else if (totalBalance > 100000 && totalBalance <= 1000000 ether) {
             percentage = 60;
-        } else if (totalBalance > 1000000 && totalBalance < 10000000 ether) {
+        } else if (totalBalance > 1000000 && totalBalance <= 10000000 ether) {
             percentage = 70;
-        } else if (totalBalance > 10000000 && totalBalance < 100000000 ether) {
+        } else if (totalBalance > 10000000 && totalBalance <= 100000000 ether) {
             percentage = 80;
         } else {
             percentage = 90;
