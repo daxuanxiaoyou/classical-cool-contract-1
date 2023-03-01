@@ -10,6 +10,8 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "hardhat/console.sol";
 
+// TODO: 721AA
+// TODO: 721AA
 contract ClassicalNFT is
     ERC721,
     ERC2981,
@@ -31,7 +33,7 @@ contract ClassicalNFT is
 
     uint256 totalBalance;
 
-    uint256 public constant reserveTokens = 100;
+    uint256 public constant reserveTokens = 100; // TODO:设置大一点？中间有一段数据可以空出来
     uint256 public currentSupply = 0;
 
     // Constants
@@ -88,9 +90,11 @@ contract ClassicalNFT is
     event SetMintPrice(uint256 indexed price);
 
     // name and symbol
-    constructor(address _treasuryAddress, 
-            address _publicGoodAddress, 
-            uint96 feeNumerator) ERC721("Classical NFT Collectioin", "ClassicalNFT") {
+    constructor(
+        address _treasuryAddress,
+        address _publicGoodAddress,
+        uint96 feeNumerator
+    ) ERC721("Classical NFT Collectioin", "ClassicalNFT") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(SWITCH_MINT_ROLE, msg.sender);
         treasuryAddress = _treasuryAddress;
@@ -141,6 +145,7 @@ contract ClassicalNFT is
     }
 
     // transfer admin
+    // TODO: 避免转移错了地址，分步骤进行，先设置缓存地址，缓存地址完成一笔交易，再成为正式 admin
     function transferAdmin(address _newAdmin) external onlyOwner {
         //first grantRole
         _grantRole(DEFAULT_ADMIN_ROLE, _newAdmin);
@@ -154,6 +159,7 @@ contract ClassicalNFT is
     }
 
     /// the lowest price is 1e15 Wei
+    // TODO:测试一下
     function setMintPrice(uint256 _newPriceUnit) external onlyOwner {
         mintPrice = _newPriceUnit * 1e15;
         emit SetMintPrice(mintPrice);
@@ -167,6 +173,7 @@ contract ClassicalNFT is
         require(isMintEnabled, "Minting not enabled");
         require(currentSupply <= maxSupply, "Max supply reached");
         require(!bookList[_bookId], "Book id exist");
+        // TODO: chainID、contract Address,防止重放
         require(
             _verifySignMsg(signature, _bookId),
             "Verify sign message is fail, please check _bookId or signature message."
@@ -183,6 +190,7 @@ contract ClassicalNFT is
             //transfer eth to the contract
             _asyncTransfer(address(this), msg.value);
         }
+        // TODO:没有退款，是否单独搞一个 freemint function，lee 给模板
 
         // mint nft
         _safeMint(_recipient, tokenId);
@@ -190,7 +198,8 @@ contract ClassicalNFT is
         bookList[_bookId] = true;
         bookIds.push(_bookId);
         currentSupply++;
-        emit MintEvent(_recipient, tokenId, _bookId);
+        totalBalance += msg.value; //TODO
+        emit MintEvent(_recipient, tokenId, _bookId, msg.sender);
         console.log("--------------");
         console.log(msg.sender);
         console.log(msg.value);
@@ -209,7 +218,7 @@ contract ClassicalNFT is
     function mintReserve(
         address _recipient,
         string memory _bookId
-    ) external onlyOwner returns (uint256) {
+    ) external nonReentrant onlyOwner returns (uint256) {
         require(isMintEnabled, "Minting not enabled");
         require(currentSupply <= maxSupply, "Max supply reached");
         require(!bookList[_bookId], "Book id exist");
@@ -217,8 +226,10 @@ contract ClassicalNFT is
         // tokenId ++
         reserveTokenId.increment();
         // reserve 100 NFTs from 1 ~ 100
+
         uint256 tokenId = reserveTokenId.current();
 
+        // TODO, 只能在100以内才行，会超出范围
         require(tokenId <= reserveTokens, "Max reserve reached");
 
         // mint nft
@@ -248,6 +259,7 @@ contract ClassicalNFT is
     }
 
     /// @dev Overridden in order to make it an onlyOwner function
+    // TODO: ERC20 的 transfer
     function withdrawPayments(
         address payable
     ) public virtual override onlyOwner {
@@ -258,10 +270,11 @@ contract ClassicalNFT is
         uint256 percentage = getDonateRate();
 
         //先转公益地址
-        payable(publicGoodAddress).transfer(address(this).balance * percentage / 100);
-        //再转过库地址
+        payable(publicGoodAddress).transfer(
+            (address(this).balance * percentage) / 100
+        );
+        //再转国库地址
         payable(treasuryAddress).transfer(address(this).balance);
-
     }
 
     function supportsInterface(
@@ -272,22 +285,26 @@ contract ClassicalNFT is
 
     function setTokenRoyalty(
         uint256 tokenId,
-        address receiver,
+        // address receiver,
         uint96 feeNumerator
     ) public onlyOwner {
-        _setTokenRoyalty(tokenId, receiver, feeNumerator);
+        // TODO: 直接到国库，会导致 donate 无法计算，_asynctransfer 的地址和 receiver 不一样？
+        _setTokenRoyalty(tokenId, address(this), feeNumerator);
     }
 
     // receiver 搞一个版税地址
+    // TODO: 同上
     function setDefaultRoyalty(uint96 feeNumerator) public onlyOwner {
-        super._setDefaultRoyalty(treasuryAddress, feeNumerator);
+        super._setDefaultRoyalty(address(this), feeNumerator);
     }
 
-    function setTreasuryAddress(address _treasuryAddress) external onlyOwner{
+    function setTreasuryAddress(address _treasuryAddress) external onlyOwner {
         treasuryAddress = _treasuryAddress;
     }
 
-    function setPublicGoodAddress(address _publicGoodAddress) external onlyOwner{
+    function setPublicGoodAddress(
+        address _publicGoodAddress
+    ) external onlyOwner {
         publicGoodAddress = _publicGoodAddress;
     }
 
@@ -296,31 +313,29 @@ contract ClassicalNFT is
         emit Track("receive()", msg.sender, msg.value, "");
     }
 
-    function getDonateRate() public view returns (uint256){
-
+    function getDonateRate() public view returns (uint256) {
         uint256 percentage = 0;
 
         // 计算应捐赠的金额
         if (totalBalance < 10 ether) {
             percentage = 10;
-        } else if (totalBalance >10 && totalBalance < 100 ether) {
+        } else if (totalBalance > 10 && totalBalance < 100 ether) {
             percentage = 20;
-        } else if (totalBalance >100 && totalBalance < 1000 ether) {
+        } else if (totalBalance > 100 && totalBalance < 1000 ether) {
             percentage = 30;
-        } else if (totalBalance >1000 && totalBalance < 10000 ether) {
+        } else if (totalBalance > 1000 && totalBalance < 10000 ether) {
             percentage = 40;
-        } else if (totalBalance >10000 && totalBalance < 100000 ether) {
+        } else if (totalBalance > 10000 && totalBalance < 100000 ether) {
             percentage = 50;
-        } else if (totalBalance >100000 && totalBalance < 1000000 ether) {
+        } else if (totalBalance > 100000 && totalBalance < 1000000 ether) {
             percentage = 60;
-        } else if (totalBalance >1000000 && totalBalance < 10000000 ether) {
+        } else if (totalBalance > 1000000 && totalBalance < 10000000 ether) {
             percentage = 70;
-        } else if (totalBalance >10000000 && totalBalance < 100000000 ether) {
+        } else if (totalBalance > 10000000 && totalBalance < 100000000 ether) {
             percentage = 80;
         } else {
-             percentage = 90;
+            percentage = 90;
         }
         return percentage;
     }
-
 }

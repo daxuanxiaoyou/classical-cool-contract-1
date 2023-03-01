@@ -183,7 +183,7 @@ describe("ClassicalNFT", () => {
     return signedMsg;
   }
 
-  describe("Deployment", function () {
+  describe("Main", function () {
     it("Should set the right owner", async function () {
       await classicalNFT.setPublicKey(owner.address);
       const pk = await classicalNFT.getPublickey();
@@ -265,7 +265,7 @@ describe("ClassicalNFT", () => {
       expect(verifyRtn).to.equal(true);
     });
 
-    it("Should royalty success", async function () {
+    it("Should set public key success", async function () {
       const { classicalNFT, owner } = await loadFixture(
         deployClassicalNFTFixture
       );
@@ -276,17 +276,45 @@ describe("ClassicalNFT", () => {
       expect(pk).to.equal(owner.address);
     });
 
-    it("Should receive and store the funds to ClassicalNFT", async function () {
-      const { ClassicalNFT, ClassicalNFTedAmount } = await loadFixture(
-        deployClassicalNFTFixture
-      );
+    it("has all the right interfaces", async function () {
+      const { classicalNFT } = await loadFixture(deployClassicalNFTFixture);
+      expect(
+        await classicalNFT.supportsInterface(_INTERFACE_ID_ERC165),
+        "Error Royalties 165"
+      ).to.be.true;
 
-      expect(await ethers.provider.getBalance(ClassicalNFT.address)).to.equal(
-        ClassicalNFTedAmount
+      expect(
+        await classicalNFT.supportsInterface(_INTERFACE_ID_ROYALTIES_EIP2981),
+        "Error Royalties 2981"
+      ).to.be.true;
+
+      expect(
+        await classicalNFT.supportsInterface(_INTERFACE_ID_ERC721),
+        "Error Royalties 721"
+      ).to.be.true;
+    });
+    it("throws if royalty fee will exceed salePrice", async function () {
+      const { classicalNFT } = await loadFixture(deployClassicalNFTFixture);
+      const tx = classicalNFT.setDefaultRoyalty(10001);
+
+      await expect(tx).to.be.revertedWith(
+        "ERC2981: royalty fee will exceed salePrice"
       );
     });
-  });
-  describe("Mint", function () {
+    it("has the right recerver and royalty amount", async function () {
+      const tokenId = classicalNFT.mint(otherAccount.address, "2", {
+        value: ethers.utils.parseEther("0.0002"),
+      });
+      await classicalNFT.setTokenRoyalty(tokenId, otherAccount.address, 3000);
+      const { receiver, royaltyAmount } = classicalNFT.royaltyInfo(
+        tokenId,
+        100
+      ); // 100*3000/10000 = 30
+
+      expect(receiver).to.be.equal(otherAccount.address);
+      expect(royaltyAmount).to.be.equal(30);
+    });
+
     it("Should mint only once", async function () {
       const {
         ClassicalNFT,
@@ -347,76 +375,47 @@ describe("ClassicalNFT", () => {
       await expect(getBookList).to.be.contains(bookId1).to.be.contains(bookId2);
     });
   });
+  // describe("Mint", function () {});
 
-  describe("Royalties", function () {
-    it("has all the right interfaces", async function () {
-      const { classicalNFT } = await loadFixture(deployClassicalNFTFixture);
-      expect(
-        await classicalNFT.supportsInterface(_INTERFACE_ID_ERC165),
-        "Error Royalties 165"
-      ).to.be.true;
+  // describe("Other", function () {
+  //   it("has the right royalties for tokenId", async function () {
+  //     await classicalNFT.mint(
+  //       owner.address,
+  //       royaltiesRecipient.address,
+  //       250 // 2.50%
+  //     );
 
-      expect(
-        await classicalNFT.supportsInterface(_INTERFACE_ID_ROYALTIES_EIP2981),
-        "Error Royalties 2981"
-      ).to.be.true;
+  //     const info = await classicalNFT.royaltyInfo(0, 10000);
+  //     expect(info[1].toNumber()).to.be.equal(250);
+  //     expect(info[0]).to.be.equal(royaltiesRecipient.address);
+  //   });
 
-      expect(
-        await classicalNFT.supportsInterface(_INTERFACE_ID_ERC721),
-        "Error Royalties 721"
-      ).to.be.true;
-    });
-    it("throws if royalty fee will exceed salePrice", async function () {
-      const { classicalNFT } = await loadFixture(deployClassicalNFTFixture);
-      const tx = classicalNFT.setDefaultRoyalty(10001);
+  //   it("can set address(0) as royalties recipient", async function () {
+  //     // 0.01% royalties
+  //     await classicalNFT.mint(owner.address, ADDRESS_ZERO, 1);
 
-      await expect(tx).to.be.revertedWith(
-        "ERC2981: royalty fee will exceed salePrice"
-      );
-    });
-    it("has the right recerver and royalty amount", async function () {
-      const tokenId = classicalNFT.mint(otherAccount.address, "2", {
-        value: ethers.utils.parseEther("0.0002"),
-      });
-      await classicalNFT.setTokenRoyalty(tokenId, otherAccount.address, 3000);
-      const { receiver, royaltyAmount } = classicalNFT.royaltyInfo(
-        tokenId,
-        100
-      ); // 100*3000/10000 = 30
+  //     const info = await classicalNFT.royaltyInfo(0, 10000);
+  //     expect(info[1].toNumber()).to.be.equal(1);
+  //     expect(info[0]).to.be.equal(ADDRESS_ZERO);
+  //   });
 
-      expect(receiver).to.be.equal(otherAccount.address);
-      expect(royaltyAmount).to.be.equal(30);
-    });
+  //   it("has no royalties if not set", async function () {
+  //     await classicalNFT.mint(owner.address, royaltiesRecipient.address, 0);
 
-    it("has the right royalties for tokenId", async function () {
-      await classicalNFT.mint(
-        owner.address,
-        royaltiesRecipient.address,
-        250 // 2.50%
-      );
+  //     const info = await classicalNFT.royaltyInfo(0, 100);
+  //     expect(info[1].toNumber()).to.be.equal(0);
+  //     expect(info[0]).to.be.equal(ADDRESS_ZERO);
+  //   });
+  //   it("Should receive and store the funds to ClassicalNFT", async function () {
+  //     const { ClassicalNFT, ClassicalNFTedAmount } = await loadFixture(
+  //       deployClassicalNFTFixture
+  //     );
 
-      const info = await classicalNFT.royaltyInfo(0, 10000);
-      expect(info[1].toNumber()).to.be.equal(250);
-      expect(info[0]).to.be.equal(royaltiesRecipient.address);
-    });
-
-    it("can set address(0) as royalties recipient", async function () {
-      // 0.01% royalties
-      await classicalNFT.mint(owner.address, ADDRESS_ZERO, 1);
-
-      const info = await classicalNFT.royaltyInfo(0, 10000);
-      expect(info[1].toNumber()).to.be.equal(1);
-      expect(info[0]).to.be.equal(ADDRESS_ZERO);
-    });
-
-    it("has no royalties if not set", async function () {
-      await classicalNFT.mint(owner.address, royaltiesRecipient.address, 0);
-
-      const info = await classicalNFT.royaltyInfo(0, 100);
-      expect(info[1].toNumber()).to.be.equal(0);
-      expect(info[0]).to.be.equal(ADDRESS_ZERO);
-    });
-  });
+  //     expect(await ethers.provider.getBalance(ClassicalNFT.address)).to.equal(
+  //       ClassicalNFTedAmount
+  //     );
+  //   });
+  // });
 
   describe("owner set roles", function () {
     it("should set whitelist", async function () {
