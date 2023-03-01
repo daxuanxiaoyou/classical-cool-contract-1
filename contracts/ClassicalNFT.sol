@@ -10,8 +10,6 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "hardhat/console.sol";
 
-// TODO: 721AA
-// TODO: 721AA
 contract ClassicalNFT is
     ERC721,
     ERC2981,
@@ -47,15 +45,13 @@ contract ClassicalNFT is
     bool public isMintEnabled = true;
     address public public_key;
 
-    // TODO:Public good address，未来阶梯给公益地址打款
+    // Public good address，未来阶梯给公益地址打款
     address public publicGoodAddress;
 
-    // TODO: Treasury address，国库地址设置
+    // Treasury address，国库地址设置
     address public treasuryAddress;
 
     address public oldAdmin;
-
-    // TODO 定期多签捐赠，把捐赠资金锁定 vincent
 
     /// store tokenid --> bookId
     mapping(uint256 => string) public tokenToBook;
@@ -150,14 +146,20 @@ contract ClassicalNFT is
     // transfer admin
     // TODO: 避免转移错了地址，分步骤进行，先设置缓存地址，缓存地址完成一笔交易，再成为正式 admin
     function transferAdminStep1(address _newAdmin) external onlyOwner {
-        require(oldAdmin == address(0), "Step1 cannot be executed multiple times in a row");
+        require(
+            oldAdmin == address(0),
+            "Step1 cannot be executed multiple times in a row"
+        );
         //first grantRole
         _grantRole(DEFAULT_ADMIN_ROLE, _newAdmin);
         oldAdmin = msg.sender;
     }
 
     function transferAdminStep2() external onlyOwner {
-        require(oldAdmin != address(0), "Step2 cannot be executed multiple times in a row");
+        require(
+            oldAdmin != address(0),
+            "Step2 cannot be executed multiple times in a row"
+        );
         require(oldAdmin != msg.sender, "Must be the new admin");
         //then revoke old
         _revokeRole(DEFAULT_ADMIN_ROLE, oldAdmin);
