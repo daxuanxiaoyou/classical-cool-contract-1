@@ -29,19 +29,19 @@ Compiled 17 Solidity files successfully
 
 # 部署
 hh deploy
-Contract deployed to address: 0x1a9D8d59592311CD424FC4C22a1AACd28F1D0C9B
+Contract deployed to address: 0xdE30ED5535c7f1918136E0e1C29ee7421154C99A
 
 # verify
-hh verify 0x1a9D8d59592311CD424FC4C22a1AACd28F1D0C9B
+hh verify 0xdE30ED5535c7f1918136E0e1C29ee7421154C99A
 
 Nothing to compile
 No need to generate any newer typings.
 Successfully submitted source code for contract
-contracts/ClassicalNFT.sol:ClassicalNFT at 0x1a9D8d59592311CD424FC4C22a1AACd28F1D0C9B
+contracts/ClassicalNFT.sol:ClassicalNFT at 0xdE30ED5535c7f1918136E0e1C29ee7421154C99A
 for verification on the block explorer. Waiting for verification result...
 
 Successfully verified contract ClassicalNFT on Etherscan.
-https://goerli.etherscan.io/address/0x1a9D8d59592311CD424FC4C22a1AACd28F1D0C9B#code
+https://goerli.etherscan.io/address/0xdE30ED5535c7f1918136E0e1C29ee7421154C99A#code
 ```
 
 # UT Case
