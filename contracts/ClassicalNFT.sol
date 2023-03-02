@@ -114,15 +114,22 @@ contract ClassicalNFT is
         emit AddPKSuccess(pk, msg.sender);
     }
 
+    event VERIFY(
+        address indexed msgSender,
+        address indexed recoverAddr,
+        address indexed public_key
+    );
+
     // TODO:need use internal
     function _verifySignMsg(
+        address msgSender,
         bytes memory signature,
         string memory _bookId,
         address classicalNFTAddr,
         uint256 chainId
     ) public view returns (bool) {
         bytes32 data = keccak256(
-            abi.encodePacked(msg.sender, _bookId, classicalNFTAddr, chainId)
+            abi.encodePacked(msgSender, _bookId, classicalNFTAddr, chainId)
         );
         bytes32 dataHash = data.toEthSignedMessageHash();
         address recoverAdd = dataHash.recover(signature);
@@ -130,10 +137,9 @@ contract ClassicalNFT is
     }
 
     //remove addresses to whiteList
-    function removeFromWhitelist(address[] calldata _addrArr)
-        external
-        onlyOwner
-    {
+    function removeFromWhitelist(
+        address[] calldata _addrArr
+    ) external onlyOwner {
         for (uint256 i = 0; i < _addrArr.length; i++) {
             _revokeRole(FREE_MINT_ROLE, _addrArr[i]);
         }
@@ -195,7 +201,13 @@ contract ClassicalNFT is
         require(currentSupply <= maxSupply, "Max supply reached");
         require(!bookList[_bookId], "Book id exist");
         require(
-            _verifySignMsg(signature, _bookId, classicalNFTAddr, chainId),
+            _verifySignMsg(
+                msg.sender,
+                signature,
+                _bookId,
+                classicalNFTAddr,
+                chainId
+            ),
             "Verify sign message is fail, please check _bookId or signature or classicalNFTAddr or chainId."
         );
 
@@ -230,7 +242,13 @@ contract ClassicalNFT is
         require(currentSupply <= maxSupply, "Max supply reached");
         require(!bookList[_bookId], "Book id exist");
         require(
-            _verifySignMsg(signature, _bookId, classicalNFTAddr, chainId),
+            _verifySignMsg(
+                msg.sender,
+                signature,
+                _bookId,
+                classicalNFTAddr,
+                chainId
+            ),
             "Verify sign message is fail, please check _bookId or signature or classicalNFTAddr or chainId."
         );
 
@@ -253,12 +271,10 @@ contract ClassicalNFT is
         return bookIds;
     }
 
-    function mintReserve(address _recipient, string memory _bookId)
-        external
-        nonReentrant
-        onlyOwner
-        returns (uint256)
-    {
+    function mintReserve(
+        address _recipient,
+        string memory _bookId
+    ) external nonReentrant onlyOwner returns (uint256) {
         require(isMintEnabled, "Minting not enabled");
         require(currentSupply <= maxSupply, "Max supply reached");
         require(!bookList[_bookId], "Book id exist");
@@ -299,12 +315,9 @@ contract ClassicalNFT is
 
     /// @dev Overridden in order to make it an onlyOwner function
     // TODO: ERC20 的 transfer
-    function withdrawPayments(address payable)
-        public
-        virtual
-        override
-        onlyOwner
-    {
+    function withdrawPayments(
+        address payable
+    ) public virtual override onlyOwner {
         // 先取
         super.withdrawPayments(payable(address(this)));
 
@@ -319,19 +332,16 @@ contract ClassicalNFT is
         payable(treasuryAddress).transfer(address(this).balance);
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(ERC721, ERC2981, AccessControl)
-        returns (bool)
-    {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view override(ERC721, ERC2981, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
-    function setTokenRoyalty(uint256 tokenId, uint96 feeNumerator)
-        public
-        onlyOwner
-    {
+    function setTokenRoyalty(
+        uint256 tokenId,
+        uint96 feeNumerator
+    ) public onlyOwner {
         // TODO: 直接到国库，会导致 donate 无法计算，_asynctransfer 的地址和 receiver 不一样？
         _setTokenRoyalty(tokenId, address(this), feeNumerator);
     }
@@ -345,10 +355,9 @@ contract ClassicalNFT is
         treasuryAddress = _treasuryAddress;
     }
 
-    function setPublicGoodAddress(address _publicGoodAddress)
-        external
-        onlyOwner
-    {
+    function setPublicGoodAddress(
+        address _publicGoodAddress
+    ) external onlyOwner {
         publicGoodAddress = _publicGoodAddress;
     }
 

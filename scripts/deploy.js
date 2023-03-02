@@ -1,8 +1,9 @@
 const { task } = require('hardhat/config')
-const { getAccount, getNetwork } = require('./helpers')
+const { getAccount } = require('./helpers')
 
 task('deploy', 'Deploys the ClassicalNFT.sol contract').setAction(
   async function (taskArguments, hre) {
+    console.log(hre.network)
     const nftContractFactory = await hre.ethers.getContractFactory(
       'ClassicalNFT',
       getAccount(),

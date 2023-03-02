@@ -2,6 +2,7 @@
 import { expect } from "chai";
 import { deployments, ethers, network } from "hardhat";
 import { utils, Wallet } from "ethers";
+import cNFT from "../artifacts/contracts/ClassicalNFT.sol/ClassicalNFT.json";
 import {
   concat,
   hashMessage,
@@ -19,12 +20,17 @@ const _INTERFACE_ID_ERC165 = "0x01ffc9a7";
 const _INTERFACE_ID_ROYALTIES_EIP2981 = "0x2a55205a";
 const _INTERFACE_ID_ERC721 = "0x80ac58cd";
 const privateKey =
+  // "0x28e5f0183df7dfc427afc14e32e2c24fe09de293eb3d1ee82443e850c0fb8a12"; //localhost 的私钥
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; //localhost 的私钥
 // const privateKey = `0x${process.env.ACCOUNT_PRIVATE_KEY}` || "";
 const privateKeyNo0x =
   "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
+const deployerPrivatekey =
+  "0x2c552786ae932d4b6967add3c0fe0bea49ce147b4d6f509953ed83a770966249";
 // import { keccak256 } from "@ethersproject/keccak256";
+const dafengPrivateKey =
+  "0x28e5f0183df7dfc427afc14e32e2c24fe09de293eb3d1ee82443e850c0fb8a12";
 
 describe("ClassicalNFT", () => {
   let ClassicalNFT: any;
@@ -37,6 +43,7 @@ describe("ClassicalNFT", () => {
   let otherAccount2: any; // 其他地址
   let classicalNFT: any; // 合约实例
   let ClassicalNFTedAmount: number;
+  let txSigner: any;
   const ADDRESS_ZERO = ethers.constants.AddressZero;
 
   async function deployClassicalNFTFixture() {
@@ -59,9 +66,7 @@ describe("ClassicalNFT", () => {
     await classicalNFT.deployed();
 
     const ONE_GWEI = 1_000_000_000;
-
     ClassicalNFTedAmount = ONE_GWEI;
-
     // Fixtures can return anything you consider useful for your tests
     return {
       ClassicalNFT,
@@ -139,7 +144,7 @@ describe("ClassicalNFT", () => {
     const digestData = signingKey.signDigest(hashData);
     const signature = joinSignature(digestData);
 
-    // const recoveredAddress = utils.recoverAddress(hashData, signature);
+    const recoveredAddress = utils.recoverAddress(hashData, signature);
     return signature;
   }
 
@@ -181,7 +186,11 @@ describe("ClassicalNFT", () => {
       const { classicalNFT, owner } = await loadFixture(
         deployClassicalNFTFixture
       );
-      await classicalNFT.setPublicKey(owner.address);
+      // await classicalNFT.setPublicKey(
+      //   "0xd332DCa2B5681Cc5e7E69C44B00182EbA2A6dcF5"
+      // );
+      const dafengAddr = "0xb104fa658Da6E0D0cf10e4FbBa968F1782165B61";
+      await classicalNFT.setPublicKey(dafengAddr);
 
       // 1、------------------------全部自己实现的逻辑 ------------------------
       // const sigedMsg = signMsgFromString(
@@ -212,24 +221,27 @@ describe("ClassicalNFT", () => {
       // }
 
       // 3、------------------------针对 address 验证------------------------
-      const bookId = "bookid1";
+      const bookId = "4";
       const classicalNFTAddr = classicalNFT.address;
       // const chainId = await (
       //   await ethers.getDefaultProvider().getNetwork()
       // ).chainId;
 
       const netName = network.name;
-      const netId = network.config.chainId || 1;
+      // const netId = network.config.chainId || 1;
+      const netId = 5;
 
       const sigedMsg = signMsgFromAddress(
-        owner.address, //msg.sender
+        owner.address, //msg.sender 必须是 msg.sender
+        // dafengAddr,
         bookId,
         classicalNFTAddr,
         netId,
-        privateKey
+        dafengPrivateKey
       );
 
       const verifyRtn = await classicalNFT._verifySignMsg(
+        owner.address,
         sigedMsg,
         bookId,
         classicalNFTAddr,
@@ -275,6 +287,40 @@ describe("ClassicalNFT", () => {
       await expect(tx).to.be.revertedWith(
         "ERC2981: royalty fee will exceed salePrice"
       );
+    });
+    it("debug goerli", async function () {
+      const dafengAddr = "0xb104fa658Da6E0D0cf10e4FbBa968F1782165B61";
+      const signPublicAddr = "0xd332DCa2B5681Cc5e7E69C44B00182EbA2A6dcF5";
+      let polygon_con_addr = "0x759100Bf7AF047faC50e0696ea1Ca563f44DacC1";
+      const ufo_goerli_con_addr = "0xa8911Ee720eE12cB5802534012eE0fbBFD83C271";
+      // const goerliContractAddress = "0xdE30ED5535c7f1918136E0e1C29ee7421154C99A";
+      // classicalNFT = new ethers.Contract(goerliContractAddress, cNFT.abi);
+      // const signer = new Wallet(privateKey);
+      // txSigner = classicalNFT.connect(signer);
+      // await classicalNFT.connect(signer).setPublicKey(dafeng);
+
+      let con = await ethers.getContractAt(cNFT.abi, ufo_goerli_con_addr);
+      await con.setPublicKey(dafengAddr);
+      const bookId = "4";
+      const classicalNFTAddr = con.address;
+      // const netId = network.config.chainId || 5;
+      const netId = 5;
+
+      const sigedMsg = signMsgFromAddress(
+        dafengAddr, //msg.sender
+        bookId,
+        ufo_goerli_con_addr,
+        netId,
+        dafengPrivateKey
+      );
+
+      const verifyRtn = await con._verifySignMsg(
+        sigedMsg,
+        bookId,
+        classicalNFTAddr,
+        netId
+      );
+      console.log("---------------", verifyRtn);
     });
     it("has the right recerver and royalty amount", async function () {
       const { classicalNFT, owner, otherAccount } = await loadFixture(
