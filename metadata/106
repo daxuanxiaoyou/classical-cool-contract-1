@@ -1,10 +1,9 @@
 {
   "name": "尚书",
-  "description": "尚书",
+  "description": "《尚书》是中国最古老的皇室文集，是中国第一部上古历史文件和部分追述古代事迹著作的汇编，它保存了商周特别是西周初期的一些重要史料。",
   "image": "https://arseed.web3infra.dev/HSBvLrKdHmm1llmN_zLCtFuevwxXa0c03ZtbHuwF-ac",
-  "attributes": [
-    {
-      "value": "fantastic"
-    }
-  ]
+  "attributes": {
+    "era": "周代",
+    "author": "伏生"
+  }
 }

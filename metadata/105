@@ -1,10 +1,9 @@
 {
   "name": "诗经",
-  "description": "诗经",
+  "description": "《诗经》是中国最早的诗歌总集，收录自西周初年至春秋中叶的诗歌305篇",
   "image": "https://arseed.web3infra.dev/ofLMPtc2aFI59ECU_xzEWRH1wtXCb1c5ApSXGgXaBF4",
-  "attributes": [
-    {
-      "value": "nice"
-    }
-  ]
+  "attributes": {
+    "era": "西周",
+    "author": "不详"
+  }
 }

@@ -2,12 +2,8 @@
   "name": "孟子",
   "description": "《孟子》是儒家的经典著作",
   "image": "https://arseed.web3infura.io/bundle/tx/z6diwjr9E2GwXnDMcZynwS-6FVVVlzil7_5j3Dlsbec/data",
-  "attributes": [
-    {
-      "era": "战国时代"
-    },
-    {
-      "author": "孟子"
-    }
-  ]
+  "attributes": {
+    "era": "战国时代",
+    "author": "孟子"
+  }
 }

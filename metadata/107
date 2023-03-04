@@ -1,10 +1,9 @@
 {
   "name": "礼记",
-  "description": "礼记",
+  "description": "《礼记》是一部记录中国古代礼仪制度的书籍，其内容广泛涉及礼仪、法律、文化、历史等多个方面",
   "image": "https://arseed.web3infra.dev/V7tyC9j6nPV25Q0ev1sFOJRpu85wjFJBtBsCOX0NHp0",
-  "attributes": [
-    {
-      "value": "creative"
-    }
-  ]
+  "attributes": {
+    "era": "战国末期至西汉初年",
+    "author": "孔子"
+  }
 }

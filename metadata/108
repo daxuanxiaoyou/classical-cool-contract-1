@@ -1,10 +1,9 @@
 {
   "name": "周易",
-  "description": "周易",
+  "description": "《周易》是中国古代的一部经典著作，被誉为“易经”或“易”，是我国古代最早的一部神秘哲学文化著作之一",
   "image": "https://arseed.web3infra.dev/1DvvAh-UI-O3QQYd1o1C3mHQbY1OLOljAdc-n35QOWg",
-  "attributes": [
-    {
-      "value": "happy"
-    }
-  ]
+  "attributes": {
+    "era": "西周",
+    "author": "周文王姬昌"
+  }
 }

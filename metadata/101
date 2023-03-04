@@ -2,15 +2,8 @@
   "name": "论语",
   "description": "《论语》是以春秋时期思想家孔子言行为主的言论汇编，为儒家重要经典之一",
   "image": "https://arseed.web3infra.dev/6UJZ9o8LzVDPBmIELTROoV53_gCajNDX3TxQqKfuuBk",
-  "attributes": [
-    {
-      "era": "东周"
-    },
-    {
-      "author": "孔子的弟子和再传弟子"
-    },
-    {
-      "publish_date": "公元前5世纪"
-    }
-  ]
+  "attributes": {
+    "era": "东周",
+    "author": "孔子的弟子和再传弟子"
+  }
 }

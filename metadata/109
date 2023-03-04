@@ -1,10 +1,9 @@
 {
   "name": "春秋",
-  "description": "春秋",
+  "description": "春秋即历史，现在通常指鲁国《春秋》",
   "image": "https://arseed.web3infra.dev/feBxur-QwbBiJp30RSGc5d1mBwDUKhy0E4dUtD7qfQ8",
-  "attributes": [
-    {
-      "value": "good"
-    }
-  ]
+  "attributes": {
+    "era": "春秋",
+    "author": "不详"
+  }
 }
