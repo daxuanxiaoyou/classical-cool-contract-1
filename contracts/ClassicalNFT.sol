@@ -266,6 +266,36 @@ contract ClassicalNFT is
         emit MintEvent(_recipient, tokenId, _bookId, msg.sender);
         return tokenId;
     }
+    
+    function mintAllFree(
+        address _recipient,
+        string memory _bookId,
+        bytes memory signature,
+        address classicalNFTAddr,
+        uint chainId
+    ) public nonReentrant returns (uint256) {
+        require(isMintEnabled, "Minting not enabled");
+        require(currentSupply <= maxSupply, "Max supply reached");
+        require(!bookList[_bookId], "Book id exist");
+        require(
+            _verifySignMsg(signature, _bookId, classicalNFTAddr, chainId),
+            "Verify sign message is fail, please check _bookId or signature or classicalNFTAddr or chainId."
+        );
+
+        // tokenId ++
+        currentTokenId.increment();
+        // reserve 100 NFTs from 1 ~ 10000
+        uint256 tokenId = currentTokenId.current() + reserveTokens;
+
+        // mint nft
+        _safeMint(_recipient, tokenId);
+        tokenToBook[tokenId] = _bookId;
+        bookList[_bookId] = true;
+        bookIds.push(_bookId);
+        currentSupply++;
+        emit MintEvent(_recipient, tokenId, _bookId, msg.sender);
+        return tokenId;
+    }
 
     function getBookList() public view returns (string[] memory) {
         return bookIds;
